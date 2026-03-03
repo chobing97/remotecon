@@ -359,7 +359,7 @@
       <p>터미널을 모바일에서 제어하세요</p>
     </div>
     <div class="qr-card">
-      <canvas id="qr-canvas" class="qr-canvas"></canvas>
+      <img id="qr-img" class="qr-canvas" width="220" height="220" alt="QR Code">
       <div class="qr-label">
         <p>모바일로 스캔하세요</p>
         <small id="qr-url"></small>
@@ -434,7 +434,6 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.3.0/lib/xterm.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.8.0/lib/addon-fit.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.9.0/lib/addon-web-links.js"></script>
@@ -466,11 +465,8 @@
       if (!isMobile()) {
         const url = location.href;
         document.getElementById('qr-url').textContent = url;
-        QRCode.toCanvas(document.getElementById('qr-canvas'), url, {
-          width: 220,
-          margin: 2,
-          color: { dark: '#1a1b26', light: '#ffffff' },
-        });
+        document.getElementById('qr-img').src =
+          `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}&bgcolor=ffffff&color=1a1b26&margin=10`;
         showScreen('screen-desktop');
         return;
       }
