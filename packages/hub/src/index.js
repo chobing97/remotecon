@@ -67,6 +67,12 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`[hub] Running on port ${PORT}`);
   console.log(`[hub] HUB_URL: ${process.env.HUB_URL || `http://localhost:${PORT}`}`);
+  console.log(`[hub] __dirname: ${__dirname}`);
+  console.log(`[hub] cwd: ${process.cwd()}`);
+  console.log(`[hub] /app contents: ${fs.existsSync('/app') ? fs.readdirSync('/app').join(', ') : 'NOT FOUND'}`);
+  if (fs.existsSync('/app/packages')) {
+    console.log(`[hub] /app/packages: ${fs.readdirSync('/app/packages').join(', ')}`);
+  }
   console.log(`[hub] webDist: ${webDist}`);
   console.log(`[hub] webDist exists: ${fs.existsSync(webDist)}`);
   if (fs.existsSync(webDist)) {
