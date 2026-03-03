@@ -88,6 +88,12 @@ function setupWebSocket(server) {
 }
 
 function handleTerminalConnection(ws, session) {
+  // 재연결 시 대기 중인 삭제 타이머 취소
+  if (session._deleteTimer) {
+    clearTimeout(session._deleteTimer);
+    session._deleteTimer = null;
+  }
+
   session.terminalWs = ws;
   broadcastText(session, JSON.stringify({ type: 'status', online: true }));
 
@@ -104,9 +110,14 @@ function handleTerminalConnection(ws, session) {
 
   ws.on('close', () => {
     session.terminalWs = null;
-    deleteSession(session.id);
     broadcastText(session, JSON.stringify({ type: 'status', online: false }));
-    session.browserWss.forEach(bws => bws.close());
+
+    // 60초 후 세션 삭제 — remotecon 재연결 window 허용
+    // 재연결 시 clearTimeout으로 취소됨
+    session._deleteTimer = setTimeout(() => {
+      deleteSession(session.id);
+      session.browserWss.forEach(bws => bws.close());
+    }, 60_000);
   });
 
   ws.on('error', (err) => {
