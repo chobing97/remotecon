@@ -14,7 +14,7 @@ const DEVICE_CLIENT_ID = config.DEVICE_CLIENT_ID;
 const DEVICE_CLIENT_SECRET = config.DEVICE_CLIENT_SECRET;
 
 // 아직 config.js가 설정되지 않은 경우 안내
-if (HUB_URL.includes('your-hub') || DEVICE_CLIENT_ID.includes('YOUR_DEVICE_CLIENT_ID') || !DEVICE_CLIENT_SECRET) {
+if (DEVICE_CLIENT_ID.includes('YOUR_DEVICE_CLIENT_ID') || !DEVICE_CLIENT_SECRET) {
   process.stderr.write('[remotecon] 오류: 아직 서버 설정이 완료되지 않았습니다.\n');
   process.stderr.write('  packages/cli/src/config.js 에서 HUB_URL과 DEVICE_CLIENT_ID를 설정하세요.\n');
   process.exit(1);

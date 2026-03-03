@@ -6,7 +6,7 @@
 
 module.exports = {
   HUB_URL: process.env.REMOTECON_HUB_URL
-    || 'https://your-hub.railway.app',           // ← Hub 배포 후 변경
+    || 'https://remotecon-production.up.railway.app',
 
   DEVICE_CLIENT_ID: process.env.GOOGLE_DEVICE_CLIENT_ID
     || '628264735702-7dsolapboqsn7amtcpkjd8scqs62h56i.apps.googleusercontent.com',
