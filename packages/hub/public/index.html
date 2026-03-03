@@ -470,7 +470,25 @@
 
     // ── 초기화 ───────────────────────────────────────────
     async function init() {
-      // 데스크탑이면 QR 코드 화면 표시
+      // 로그인 여부 먼저 확인 (데스크탑/모바일 공통)
+      let loggedIn = false;
+      try {
+        const res = await fetch('/api/me');
+        if (res.ok) {
+          currentUser = await res.json();
+          document.getElementById('user-email').textContent = currentUser.email;
+          loggedIn = true;
+        }
+      } catch {}
+
+      // 로그인 상태면 세션 목록 (데스크탑/모바일 모두)
+      if (loggedIn) {
+        showScreen('screen-sessions');
+        loadSessions();
+        return;
+      }
+
+      // 미로그인 + 데스크탑이면 QR 화면
       if (!isMobile()) {
         const url = location.href;
         document.getElementById('qr-url').textContent = url;
@@ -480,16 +498,8 @@
         return;
       }
 
-      try {
-        const res = await fetch('/api/me');
-        if (!res.ok) { showScreen('screen-login'); return; }
-        currentUser = await res.json();
-        document.getElementById('user-email').textContent = currentUser.email;
-        showScreen('screen-sessions');
-        loadSessions();
-      } catch {
-        showScreen('screen-login');
-      }
+      // 미로그인 + 모바일이면 로그인 화면
+      showScreen('screen-login');
     }
 
     // ── 세션 목록 ────────────────────────────────────────
