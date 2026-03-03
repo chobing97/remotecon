@@ -1,8 +1,8 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd ../.. && npm ci && npm run build -w @remotecon/web"
+buildCommand = "npm ci && npm run build -w @remotecon/web"
 
 [deploy]
-startCommand = "node src/index.js"
+startCommand = "node packages/hub/src/index.js"
 healthcheckPath = "/health"
 restartPolicyType = "on_failure"
