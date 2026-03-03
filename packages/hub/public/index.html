@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1a1b26">
+  <title>RemoteCon</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.3.0/css/xterm.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #1a1b26;
+      --surface: #1e1e2e;
+      --surface2: #292938;
+      --border: #3b3b52;
+      --fg: #c0caf5;
+      --fg-dim: #6b7089;
+      --accent: #7aa2f7;
+      --green: #9ece6a;
+      --red: #f7768e;
+      --yellow: #e0af68;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      height: 100dvh;
+    }
+    .screen.active { display: flex; }
+
+    /* ── 로그인 화면 ── */
+    #screen-login {
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      padding: 40px 24px;
+    }
+
+    .logo {
+      text-align: center;
+    }
+    .logo h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--accent);
+    }
+    .logo p {
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--fg-dim);
+    }
+
+    .btn-google {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+      color: #333;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    /* ── 세션 목록 화면 ── */
+    #screen-sessions {
+      overflow: hidden;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      padding-top: max(12px, env(safe-area-inset-top));
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .header-user {
+      font-size: 13px;
+      color: var(--fg-dim);
+    }
+
+    .btn-icon {
+      background: none;
+      border: none;
+      color: var(--fg-dim);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .btn-icon:hover { background: var(--surface2); }
+
+    .sessions-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .session-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.1s;
+    }
+    .session-card:active { background: var(--surface2); }
+
+    .session-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .session-dot.online { background: var(--green); }
+    .session-dot.offline { background: var(--fg-dim); }
+
+    .session-info { flex: 1; min-width: 0; }
+    .session-name {
+      font-size: 15px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .session-meta {
+      font-size: 12px;
+      color: var(--fg-dim);
+      margin-top: 2px;
+    }
+
+    .sessions-empty {
+      text-align: center;
+      color: var(--fg-dim);
+      padding: 60px 20px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .btn-refresh {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+
+    /* ── 터미널 화면 ── */
+    #screen-terminal {
+      overflow: hidden;
+    }
+
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      padding-top: max(10px, env(safe-area-inset-top));
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .btn-back {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1;
+    }
+
+    .terminal-session-name {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status-badge {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .status-badge.online { background: rgba(158,206,106,0.15); color: var(--green); }
+    .status-badge.offline { background: rgba(107,112,137,0.15); color: var(--fg-dim); }
+
+    #terminal-container {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      background: #1a1b26;
+    }
+
+    .quick-buttons {
+      display: flex;
+      gap: 6px;
+      padding: 6px 10px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+      flex-shrink: 0;
+    }
+    .quick-buttons::-webkit-scrollbar { display: none; }
+
+    .btn-quick {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 13px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      white-space: nowrap;
+      cursor: pointer;
+      flex-shrink: 0;
+      min-height: 32px;
+    }
+    .btn-quick:active { background: var(--border); }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      padding: 8px 10px;
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #terminal-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 16px; /* iOS 자동 줌 방지 */
+      outline: none;
+    }
+    #terminal-input::placeholder { color: var(--fg-dim); }
+    #terminal-input:focus { border-color: var(--accent); }
+
+    .btn-send {
+      background: var(--accent);
+      color: #1a1b26;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .btn-send:active { opacity: 0.8; }
+
+    /* ── 공통 ── */
+    .error-banner {
+      background: rgba(247,118,142,0.15);
+      color: var(--red);
+      padding: 10px 16px;
+      font-size: 13px;
+      text-align: center;
+      border-bottom: 1px solid rgba(247,118,142,0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 로그인 화면 -->
+  <div id="screen-login" class="screen">
+    <div class="logo">
+      <h1>RemoteCon</h1>
+      <p>터미널을 모바일에서 제어하세요</p>
+    </div>
+    <a href="/auth/google" class="btn-google">
+      <svg width="20" height="20" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Google로 로그인
+    </a>
+  </div>
+
+  <!-- 세션 목록 화면 -->
+  <div id="screen-sessions" class="screen">
+    <div class="header">
+      <span class="header-title">RemoteCon</span>
+      <span class="header-user" id="user-email"></span>
+      <button class="btn-icon" id="btn-logout">로그아웃</button>
+    </div>
+    <div class="sessions-list" id="sessions-list">
+      <div class="sessions-empty">
+        <div>활성 세션이 없습니다</div>
+        <div style="margin-top:8px;font-size:12px">터미널에서 <code style="background:var(--surface2);padding:2px 6px;border-radius:4px">remotecon</code> 을 실행하세요</div>
+        <button class="btn-refresh" id="btn-refresh">새로고침</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 터미널 화면 -->
+  <div id="screen-terminal" class="screen">
+    <div class="terminal-header">
+      <button class="btn-back" id="btn-back">‹</button>
+      <span class="terminal-session-name" id="terminal-session-name"></span>
+      <span class="status-badge offline" id="status-badge">오프라인</span>
+    </div>
+    <div id="terminal-container"></div>
+    <div class="quick-buttons">
+      <button class="btn-quick" onclick="sendKey('y\r')">Yes</button>
+      <button class="btn-quick" onclick="sendKey('n\r')">No</button>
+      <button class="btn-quick" onclick="sendKey('\r')">⏎ Enter</button>
+      <button class="btn-quick" onclick="sendKey('\x03')">Ctrl+C</button>
+      <button class="btn-quick" onclick="sendKey('\x04')">Ctrl+D</button>
+      <button class="btn-quick" onclick="sendKey('\t')">Tab</button>
+      <button class="btn-quick" onclick="sendKey('\x1b[A')">↑</button>
+      <button class="btn-quick" onclick="sendKey('\x1b[B')">↓</button>
+      <button class="btn-quick" onclick="sendKey('\x1b[D')">←</button>
+      <button class="btn-quick" onclick="sendKey('\x1b[C')">→</button>
+    </div>
+    <div class="input-row">
+      <input
+        type="text"
+        id="terminal-input"
+        placeholder="명령어 입력..."
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+      >
+      <button class="btn-send" id="btn-send">전송</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.3.0/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.8.0/lib/addon-fit.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.9.0/lib/addon-web-links.js"></script>
+  <script>
+  (async () => {
+    // ── 상태 ────────────────────────────────────────────
+    let currentUser = null;
+    let currentSession = null;
+    let ws = null;
+    let wsReconnectTimer = null;
+    let term = null;
+    let fitAddon = null;
+
+    // ── 화면 전환 ────────────────────────────────────────
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    // ── 초기화 ───────────────────────────────────────────
+    async function init() {
+      try {
+        const res = await fetch('/api/me');
+        if (!res.ok) { showScreen('screen-login'); return; }
+        currentUser = await res.json();
+        document.getElementById('user-email').textContent = currentUser.email;
+        showScreen('screen-sessions');
+        loadSessions();
+      } catch {
+        showScreen('screen-login');
+      }
+    }
+
+    // ── 세션 목록 ────────────────────────────────────────
+    async function loadSessions() {
+      const res = await fetch('/api/sessions');
+      const sessions = await res.json();
+      renderSessions(sessions);
+    }
+
+    function renderSessions(sessions) {
+      const list = document.getElementById('sessions-list');
+      if (!sessions.length) {
+        list.innerHTML = `
+          <div class="sessions-empty">
+            <div>활성 세션이 없습니다</div>
+            <div style="margin-top:8px;font-size:12px">터미널에서 <code style="background:var(--surface2);padding:2px 6px;border-radius:4px">remotecon</code> 을 실행하세요</div>
+            <button class="btn-refresh" id="btn-refresh">새로고침</button>
+          </div>`;
+        document.getElementById('btn-refresh')?.addEventListener('click', loadSessions);
+        return;
+      }
+
+      list.innerHTML = sessions.map(s => `
+        <div class="session-card" data-id="${s.id}" data-name="${escHtml(s.name)}">
+          <div class="session-dot ${s.online ? 'online' : 'offline'}"></div>
+          <div class="session-info">
+            <div class="session-name">${escHtml(s.name)}</div>
+            <div class="session-meta">${s.online ? '연결됨' : '오프라인'} · ${formatTime(s.createdAt)}</div>
+          </div>
+          <span style="color:var(--fg-dim);font-size:18px">›</span>
+        </div>`).join('');
+
+      list.querySelectorAll('.session-card').forEach(card => {
+        card.addEventListener('click', () => openSession(card.dataset.id, card.dataset.name));
+      });
+    }
+
+    // ── 터미널 세션 열기 ─────────────────────────────────
+    async function openSession(sessionId, sessionName) {
+      currentSession = { id: sessionId, name: sessionName };
+      document.getElementById('terminal-session-name').textContent = sessionName;
+      showScreen('screen-terminal');
+      initTerminal();
+      await connectWs(sessionId);
+    }
+
+    function initTerminal() {
+      if (term) { term.dispose(); }
+
+      term = new Terminal({
+        theme: {
+          background: '#1a1b26', foreground: '#c0caf5', cursor: '#c0caf5',
+          black: '#15161e', red: '#f7768e', green: '#9ece6a', yellow: '#e0af68',
+          blue: '#7aa2f7', magenta: '#bb9af7', cyan: '#7dcfff', white: '#a9b1d6',
+          brightBlack: '#414868', brightRed: '#f7768e', brightGreen: '#9ece6a',
+          brightYellow: '#e0af68', brightBlue: '#7aa2f7', brightMagenta: '#bb9af7',
+          brightCyan: '#7dcfff', brightWhite: '#c0caf5',
+        },
+        fontSize: 13,
+        fontFamily: '"JetBrains Mono", "Cascadia Code", Menlo, monospace',
+        convertEol: true,
+        scrollback: 3000,
+        cursorBlink: true,
+      });
+
+      fitAddon = new FitAddon.FitAddon();
+      term.loadAddon(fitAddon);
+      term.loadAddon(new WebLinksAddon.WebLinksAddon());
+
+      const container = document.getElementById('terminal-container');
+      term.open(container);
+      fitAddon.fit();
+
+      new ResizeObserver(() => fitAddon.fit()).observe(container);
+
+      // xterm 직접 입력 (iPad 키보드 등)
+      term.onData(data => wsSend(data));
+    }
+
+    // ── WebSocket 연결 ───────────────────────────────────
+    async function connectWs(sessionId) {
+      clearTimeout(wsReconnectTimer);
+      if (ws) { ws.close(); ws = null; }
+
+      // 단기 WS 토큰 발급
+      let wsToken;
+      try {
+        const res = await fetch('/api/ws-token', { method: 'POST' });
+        if (!res.ok) throw new Error('token error');
+        wsToken = (await res.json()).token;
+      } catch {
+        setStatus(false);
+        wsReconnectTimer = setTimeout(() => connectWs(sessionId), 3000);
+        return;
+      }
+
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}/ws/session/${sessionId}?token=${wsToken}`);
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen = () => {};
+
+      ws.onmessage = (e) => {
+        if (e.data instanceof ArrayBuffer) {
+          term?.write(new Uint8Array(e.data));
+        } else {
+          try {
+            const msg = JSON.parse(e.data);
+            if (msg.type === 'status') setStatus(msg.online);
+          } catch {}
+        }
+      };
+
+      ws.onclose = () => {
+        if (currentSession?.id === sessionId) {
+          wsReconnectTimer = setTimeout(() => connectWs(sessionId), 3000);
+        }
+      };
+
+      ws.onerror = () => setStatus(false);
+    }
+
+    function wsSend(data) {
+      if (ws?.readyState === WebSocket.OPEN) ws.send(data);
+    }
+
+    function setStatus(online) {
+      const badge = document.getElementById('status-badge');
+      if (!badge) return;
+      badge.textContent = online ? '연결됨' : '오프라인';
+      badge.className = `status-badge ${online ? 'online' : 'offline'}`;
+    }
+
+    // ── 입력 전송 ────────────────────────────────────────
+    window.sendKey = (seq) => wsSend(seq);
+
+    const input = document.getElementById('terminal-input');
+    const sendBtn = document.getElementById('btn-send');
+
+    sendBtn.addEventListener('click', () => {
+      const text = input.value;
+      if (!text) return;
+      wsSend(text + '\r');
+      input.value = '';
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); sendBtn.click(); }
+    });
+
+    // ── 뒤로가기 ─────────────────────────────────────────
+    document.getElementById('btn-back').addEventListener('click', () => {
+      clearTimeout(wsReconnectTimer);
+      ws?.close(); ws = null;
+      currentSession = null;
+      showScreen('screen-sessions');
+      loadSessions();
+    });
+
+    // ── 로그아웃 ─────────────────────────────────────────
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+      await fetch('/auth/logout', { method: 'POST' });
+      currentUser = null;
+      showScreen('screen-login');
+    });
+
+    // ── 유틸 ─────────────────────────────────────────────
+    function escHtml(str) {
+      return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function formatTime(iso) {
+      const d = new Date(iso);
+      return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>

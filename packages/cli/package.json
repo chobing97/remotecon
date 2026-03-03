@@ -1,0 +1,12 @@
+{
+  "name": "remotecon",
+  "version": "1.0.0",
+  "bin": {
+    "remotecon": "./bin/remotecon.js"
+  },
+  "dependencies": {
+    "google-auth-library": "^9.15.1",
+    "node-pty": "^1.1.0",
+    "ws": "^8.18.1"
+  }
+}
