@@ -44,7 +44,12 @@ app.use(authRoutes);
 app.use(apiRoutes);
 
 // ── 정적 파일 (React 프로덕션 빌드) ──────────────────────
-const webDist = path.join(__dirname, '../../web/dist');
+// __dirname 기준 상대경로 + cwd 기준 절대경로 모두 시도
+const webDistCandidates = [
+  path.join(__dirname, '../../web/dist'),
+  path.join(process.cwd(), 'packages/web/dist'),
+];
+const webDist = webDistCandidates.find(p => fs.existsSync(p)) || webDistCandidates[0];
 app.use(express.static(webDist));
 // SPA 폴백: API/auth 이외의 GET 요청은 index.html로
 app.get('/{*splat}', (req, res, next) => {
