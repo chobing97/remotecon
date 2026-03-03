@@ -28,6 +28,9 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// ── 헬스체크 (인증 불필요) ────────────────────────────────
+app.get('/health', (req, res) => res.json({ ok: true }));
+
 // ── 정적 파일 ─────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, '../public')));
 
