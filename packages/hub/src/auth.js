@@ -11,7 +11,8 @@ function setupPassport() {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: `${process.env.HUB_URL}/auth/google/callback`,
+    callbackURL: '/auth/google/callback', // 상대 경로 사용 — 배포 URL에 무관하게 동작
+    proxy: true,                          // Railway 등 리버스 프록시 뒤에서 https 유지
   }, (accessToken, refreshToken, profile, done) => {
     done(null, { id: profile.id, email: profile.emails[0].value, name: profile.displayName });
   }));
