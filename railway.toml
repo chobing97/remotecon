@@ -1,7 +1,6 @@
 [build]
 builder = "nixpacks"
-installCommand = "npm install"
-buildCommand = "npm run build -w @remotecon/web"
+buildCommand = "npm install --include=dev && npm run build -w @remotecon/web"
 
 [deploy]
 startCommand = "node packages/hub/src/index.js"

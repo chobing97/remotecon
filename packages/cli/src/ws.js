@@ -19,6 +19,8 @@ function connectToHub({ hubUrl, sessionId, idToken, pty, onConnected, onDisconne
   const wsUrl = hubUrl.replace(/^http/, 'ws') + `/ws/terminal?sessionId=${sessionId}`;
   let ws;
   let closed = false;
+  let failCount = 0;
+  const MAX_FAILURES = 10;
 
   function connect() {
     ws = new WebSocket(wsUrl, {
@@ -26,6 +28,7 @@ function connectToHub({ hubUrl, sessionId, idToken, pty, onConnected, onDisconne
     });
 
     ws.on('open', () => {
+      failCount = 0;
       onConnected?.();
     });
 
@@ -52,9 +55,21 @@ function connectToHub({ hubUrl, sessionId, idToken, pty, onConnected, onDisconne
       }
     });
 
-    ws.on('close', () => {
+    ws.on('close', (code) => {
+      if (code === 4001) {
+        // 서버에서 세션이 삭제됨 — 재연결 중단
+        closed = true;
+        process.stderr.write('\x1b[2m[remotecon] 세션이 서버에서 삭제되었습니다.\x1b[0m\r\n');
+        return;
+      }
       onDisconnect?.();
       if (!closed) {
+        failCount++;
+        if (failCount >= MAX_FAILURES) {
+          process.stderr.write(`\x1b[2m[remotecon] 재연결 ${MAX_FAILURES}회 실패 — 중단합니다.\x1b[0m\r\n`);
+          closed = true;
+          return;
+        }
         setTimeout(connect, RECONNECT_DELAY);
       }
     });

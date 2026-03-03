@@ -51,9 +51,9 @@ router.delete('/api/sessions/:id', requireAuth, (req, res) => {
   if (!session) return res.status(404).json({ error: 'Not found' });
   if (session.userId !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
 
-  // 터미널 WS 닫기
-  if (session.terminalWs) session.terminalWs.close();
-  session.browserWss.forEach(ws => ws.close());
+  // 터미널 WS 닫기 (4001 = 세션 삭제됨)
+  if (session.terminalWs) session.terminalWs.close(4001, 'Session terminated');
+  session.browserWss.forEach(ws => ws.close(4001, 'Session terminated'));
   deleteSession(req.params.id);
   res.json({ ok: true });
 });
