@@ -84,11 +84,15 @@ const sessionName = (subcommand && !subcommand.startsWith('-'))
   });
 
   // 7. 터미널 stdin → PTY (raw mode)
-  process.stdin.setRawMode(true);
-  process.stdin.resume();
-  process.stdin.on('data', (data) => {
-    ptyProcess.write(data.toString('binary'));
-  });
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.on('data', (data) => {
+      ptyProcess.write(data.toString('binary'));
+    });
+  } else {
+    process.stderr.write('\x1b[2m[remotecon] 터미널 입력 비활성 (stdin이 TTY가 아님) — 모바일로만 제어 가능\x1b[0m\r\n');
+  }
 
   // 8. 터미널 리사이즈 → PTY
   process.on('SIGWINCH', () => {

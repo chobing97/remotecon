@@ -4,6 +4,9 @@
   "bin": {
     "remotecon": "./bin/remotecon.js"
   },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  },
   "dependencies": {
     "google-auth-library": "^9.15.1",
     "node-pty": "^1.1.0",
