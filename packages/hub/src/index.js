@@ -2,6 +2,7 @@
 
 require('dotenv').config();
 
+const fs = require('fs');
 const http = require('http');
 const path = require('path');
 const crypto = require('crypto');
@@ -61,6 +62,11 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`[hub] Running on port ${PORT}`);
   console.log(`[hub] HUB_URL: ${process.env.HUB_URL || `http://localhost:${PORT}`}`);
+  console.log(`[hub] webDist: ${webDist}`);
+  console.log(`[hub] webDist exists: ${fs.existsSync(webDist)}`);
+  if (fs.existsSync(webDist)) {
+    console.log(`[hub] webDist contents: ${fs.readdirSync(webDist).join(', ')}`);
+  }
 });
 
 // Graceful shutdown
