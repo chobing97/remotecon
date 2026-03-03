@@ -40,6 +40,50 @@
     }
     .screen.active { display: flex; }
 
+    /* ── 데스크탑 QR 화면 ── */
+    #screen-desktop {
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      padding: 40px 24px;
+    }
+
+    .qr-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      max-width: 320px;
+      width: 100%;
+    }
+
+    .qr-canvas {
+      border-radius: 12px;
+      display: block;
+    }
+
+    .qr-label {
+      text-align: center;
+    }
+
+    .qr-label p {
+      font-size: 15px;
+      color: var(--fg);
+      font-weight: 500;
+    }
+
+    .qr-label small {
+      display: block;
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--fg-dim);
+      word-break: break-all;
+    }
+
     /* ── 로그인 화면 ── */
     #screen-login {
       align-items: center;
@@ -308,6 +352,21 @@
 </head>
 <body>
 
+  <!-- 데스크탑 QR 화면 -->
+  <div id="screen-desktop" class="screen">
+    <div class="logo">
+      <h1>RemoteCon</h1>
+      <p>터미널을 모바일에서 제어하세요</p>
+    </div>
+    <div class="qr-card">
+      <canvas id="qr-canvas" class="qr-canvas"></canvas>
+      <div class="qr-label">
+        <p>모바일로 스캔하세요</p>
+        <small id="qr-url"></small>
+      </div>
+    </div>
+  </div>
+
   <!-- 로그인 화면 -->
   <div id="screen-login" class="screen">
     <div class="logo">
@@ -375,6 +434,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.3.0/lib/xterm.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.8.0/lib/addon-fit.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.9.0/lib/addon-web-links.js"></script>
@@ -394,8 +454,27 @@
       document.getElementById(id).classList.add('active');
     }
 
+    // ── 모바일 여부 감지 ─────────────────────────────────
+    function isMobile() {
+      return window.matchMedia('(max-width: 768px)').matches
+        || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+
     // ── 초기화 ───────────────────────────────────────────
     async function init() {
+      // 데스크탑이면 QR 코드 화면 표시
+      if (!isMobile()) {
+        const url = location.href;
+        document.getElementById('qr-url').textContent = url;
+        QRCode.toCanvas(document.getElementById('qr-canvas'), url, {
+          width: 220,
+          margin: 2,
+          color: { dark: '#1a1b26', light: '#ffffff' },
+        });
+        showScreen('screen-desktop');
+        return;
+      }
+
       try {
         const res = await fetch('/api/me');
         if (!res.ok) { showScreen('screen-login'); return; }
