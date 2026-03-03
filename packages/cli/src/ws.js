@@ -18,7 +18,7 @@ const RECONNECT_DELAY = 3000;
 function connectToHub({ hubUrl, sessionId, idToken, pty, onConnected, onDisconnect }) {
   const wsUrl = hubUrl.replace(/^http/, 'ws') + `/ws/terminal?sessionId=${sessionId}`;
   let ws;
-  let reconnecting = false;
+  let closed = false;
 
   function connect() {
     ws = new WebSocket(wsUrl, {
@@ -26,15 +26,27 @@ function connectToHub({ hubUrl, sessionId, idToken, pty, onConnected, onDisconne
     });
 
     ws.on('open', () => {
-      reconnecting = false;
       onConnected?.();
     });
 
     ws.on('message', (data, isBinary) => {
       if (isBinary) return;
+      const text = data.toString('utf8');
+
+      // JSON 제어 메시지 (resize 등)
+      try {
+        const msg = JSON.parse(text);
+        if (msg.type === 'resize' && msg.cols && msg.rows) {
+          pty.resize(msg.cols, msg.rows);
+          return;
+        }
+      } catch {
+        // JSON이 아니면 키 입력
+      }
+
       // 브라우저에서 온 키 입력 → PTY에 쓰기
       try {
-        pty.write(data.toString('utf8'));
+        pty.write(text);
       } catch {
         // PTY 종료 후 메시지 도착 시 무시
       }
@@ -42,8 +54,7 @@ function connectToHub({ hubUrl, sessionId, idToken, pty, onConnected, onDisconne
 
     ws.on('close', () => {
       onDisconnect?.();
-      if (!reconnecting) {
-        reconnecting = true;
+      if (!closed) {
         setTimeout(connect, RECONNECT_DELAY);
       }
     });
@@ -60,11 +71,17 @@ function connectToHub({ hubUrl, sessionId, idToken, pty, onConnected, onDisconne
     // PTY 출력을 Hub로 전송 (binary 프레임)
     sendOutput(data) {
       if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(Buffer.isBuffer(data) ? data : Buffer.from(data, 'binary'));
+        ws.send(Buffer.isBuffer(data) ? data : Buffer.from(data));
+      }
+    },
+    // 터미널 크기를 Hub에 전송
+    sendResize(cols, rows) {
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'resize', cols, rows }));
       }
     },
     close() {
-      reconnecting = true; // 재연결 방지
+      closed = true;
       ws?.close();
     },
   };

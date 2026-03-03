@@ -1,0 +1,107 @@
+/* Meslo LG M for Powerline — web font */
+@font-face {
+  font-family: 'Meslo LG M for Powerline';
+  src: local('Meslo LG M for Powerline'),
+       url('/fonts/Meslo LG M Regular for Powerline.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Meslo LG M for Powerline';
+  src: local('Meslo LG M Bold for Powerline'),
+       url('/fonts/Meslo LG M Bold for Powerline.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Meslo LG M for Powerline';
+  src: local('Meslo LG M Italic for Powerline'),
+       url('/fonts/Meslo LG M Italic for Powerline.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Meslo LG M for Powerline';
+  src: local('Meslo LG M Bold Italic for Powerline'),
+       url('/fonts/Meslo LG M Bold Italic for Powerline.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* xterm.js — horizontal scroll when terminal is wider than viewport */
+.xterm .xterm-viewport {
+  overflow-x: auto !important;
+}
+
+:root {
+  /* Tokyo Night palette */
+  --bg: #1a1b26;
+  --bg-dark: #16161e;
+  --bg-highlight: #292e42;
+  --bg-surface: #24283b;
+  --fg: #c0caf5;
+  --fg-dim: #565f89;
+  --fg-bright: #c0caf5;
+  --blue: #7aa2f7;
+  --cyan: #7dcfff;
+  --green: #9ece6a;
+  --magenta: #bb9af7;
+  --red: #f7768e;
+  --yellow: #e0af68;
+  --orange: #ff9e64;
+  --border: #3b4261;
+  --radius: 8px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+input, textarea {
+  font-family: inherit;
+  outline: none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}

@@ -1,5 +1,6 @@
 [build]
 builder = "nixpacks"
+buildCommand = "cd ../.. && npm ci && npm run build -w @remotecon/web"
 
 [deploy]
 startCommand = "node src/index.js"

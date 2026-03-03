@@ -1,9 +1,15 @@
 {
   "name": "remotecon",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "workspaces": [
     "packages/hub",
+    "packages/web",
     "packages/cli"
-  ]
+  ],
+  "scripts": {
+    "dev:hub": "npm run dev -w @remotecon/hub",
+    "dev:web": "npm run dev -w @remotecon/web",
+    "build:web": "npm run build -w @remotecon/web"
+  }
 }
