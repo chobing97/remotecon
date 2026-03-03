@@ -14,19 +14,30 @@ export function useTerminal(sessionId) {
   // CLI에서 보낸 크기가 있으면 fitAddon.fit() 사용하지 않음
   const cliSizeRef = useRef(null);
 
-  // 터미널 픽셀 폭에 맞춰 컨테이너 크기 조정
-  function syncContainerWidth(term, cols) {
+  // CLI cols 기준으로 컨테이너 폭 설정 + 화면 높이에 맞춰 rows 계산
+  function applyCliCols(term, cols) {
     const el = containerRef.current;
     if (!el) return;
     try {
-      const cellWidth = term._core._renderService.dimensions.css.cell.width;
+      const dims = term._core._renderService.dimensions.css.cell;
+      const cellWidth = dims.width;
+      const cellHeight = dims.height;
       if (cellWidth > 0) {
-        const px = Math.ceil(cellWidth * cols) + 20; // 약간 여유
+        const px = Math.ceil(cellWidth * cols) + 20;
         el.style.width = px + 'px';
         el.style.minWidth = px + 'px';
       }
+      // rows는 화면(wrapper) 높이에 맞춤
+      if (cellHeight > 0) {
+        const wrapper = el.parentElement;
+        const availableHeight = wrapper ? wrapper.clientHeight : el.clientHeight;
+        const rows = Math.max(1, Math.floor(availableHeight / cellHeight));
+        term.resize(cols, rows);
+      } else {
+        term.resize(cols, term.rows);
+      }
     } catch {
-      // fallback: 안전하게 무시
+      // fallback
     }
   }
 
@@ -57,7 +68,9 @@ export function useTerminal(sessionId) {
     connect(term);
 
     const onResize = () => {
-      if (!cliSizeRef.current) {
+      if (cliSizeRef.current && termRef.current) {
+        applyCliCols(termRef.current, cliSizeRef.current.cols);
+      } else {
         fitAddon.fit();
       }
     };
@@ -87,8 +100,7 @@ export function useTerminal(sessionId) {
           const msg = JSON.parse(e.data);
           if (msg.type === 'resize' && msg.cols && msg.rows) {
             cliSizeRef.current = { cols: msg.cols, rows: msg.rows };
-            term.resize(msg.cols, msg.rows);
-            syncContainerWidth(term, msg.cols);
+            applyCliCols(term, msg.cols);
           }
         } catch {
           // ignore
@@ -109,9 +121,7 @@ export function useTerminal(sessionId) {
 
   const fit = useCallback(() => {
     if (cliSizeRef.current && termRef.current) {
-      const { cols, rows } = cliSizeRef.current;
-      termRef.current.resize(cols, rows);
-      syncContainerWidth(termRef.current, cols);
+      applyCliCols(termRef.current, cliSizeRef.current.cols);
     } else {
       fitAddonRef.current?.fit();
     }
