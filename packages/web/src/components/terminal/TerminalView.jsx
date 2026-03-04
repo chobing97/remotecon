@@ -79,78 +79,101 @@ const specialKeys = [
 ];
 
 function SelectOverlay({ termRef, onClose }) {
+  const preRef = useRef(null);
   const [text, setText] = useState('');
+  const [metrics, setMetrics] = useState(null);
 
   useEffect(() => {
     const term = termRef.current;
     if (!term) return;
+
+    // xterm 셀 크기, 폰트 정보 추출
+    try {
+      const dims = term._core._renderService.dimensions.css.cell;
+      const opts = term.options;
+      setMetrics({
+        fontSize: opts.fontSize,
+        fontFamily: opts.fontFamily,
+        lineHeight: dims.height,
+        charWidth: dims.width,
+      });
+    } catch {
+      setMetrics({
+        fontSize: 14,
+        fontFamily: "'Meslo LG M for Powerline', 'Fira Code', monospace",
+        lineHeight: 17,
+        charWidth: 8.4,
+      });
+    }
+
+    // 버퍼 텍스트 추출
     const buf = term.buffer.active;
     const lines = [];
-    // 스크롤백 포함 전체 버퍼
     for (let i = 0; i < buf.length; i++) {
       const line = buf.getLine(i);
       if (line) lines.push(line.translateToString(true));
     }
     setText(lines.join('\n').trimEnd());
+
+    // 스크롤 위치 동기화 (viewportY 기준)
+    requestAnimationFrame(() => {
+      if (preRef.current && dims) {
+        const dims2 = term._core._renderService.dimensions.css.cell;
+        preRef.current.scrollTop = buf.viewportY * dims2.height;
+      }
+    });
   }, [termRef]);
 
+  // xterm 내부 패딩 (기본 xterm padding)
+  const padding = 4;
+
   return (
-    <div style={selectStyles.overlay}>
-      <div style={selectStyles.header}>
-        <span style={selectStyles.hint}>길게 눌러서 텍스트 선택</span>
-        <button onClick={onClose} style={selectStyles.closeBtn}>Done</button>
-      </div>
-      <pre style={selectStyles.text}>{text}</pre>
+    <div style={{
+      position: 'absolute',
+      top: 0, left: 0, right: 0, bottom: 0,
+      zIndex: 20,
+      background: 'var(--bg)',
+      overflow: 'hidden',
+    }}>
+      <pre
+        ref={preRef}
+        style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          overflow: 'auto',
+          padding: `${padding}px`,
+          margin: 0,
+          fontSize: metrics?.fontSize ?? 14,
+          fontFamily: metrics?.fontFamily ?? "'Meslo LG M for Powerline', monospace",
+          lineHeight: metrics ? `${metrics.lineHeight}px` : '17px',
+          letterSpacing: 0,
+          color: 'var(--fg)',
+          whiteSpace: 'pre',
+          userSelect: 'text',
+          WebkitUserSelect: 'text',
+          tabSize: 8,
+        }}
+      >{text}</pre>
+      <button
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          top: 6, right: 6,
+          fontSize: 11,
+          padding: '4px 10px',
+          borderRadius: 4,
+          background: 'var(--blue)',
+          color: '#fff',
+          fontWeight: 600,
+          opacity: 0.85,
+          zIndex: 1,
+        }}
+      >
+        Done
+      </button>
     </div>
   );
 }
-
-const selectStyles = {
-  overlay: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    zIndex: 20,
-    background: 'var(--bg)',
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '6px 10px',
-    background: 'var(--bg-dark)',
-    borderBottom: '1px solid var(--border)',
-    flexShrink: 0,
-  },
-  hint: {
-    fontSize: 12,
-    color: 'var(--fg-dim)',
-  },
-  closeBtn: {
-    fontSize: 12,
-    padding: '4px 12px',
-    borderRadius: 4,
-    background: 'var(--blue)',
-    color: '#fff',
-    fontWeight: 600,
-  },
-  text: {
-    flex: 1,
-    overflow: 'auto',
-    padding: '8px 10px',
-    margin: 0,
-    fontSize: 13,
-    lineHeight: 1.4,
-    fontFamily: "'Meslo LG M for Powerline', 'Fira Code', monospace",
-    color: 'var(--fg)',
-    whiteSpace: 'pre-wrap',
-    wordBreak: 'break-all',
-    userSelect: 'text',
-    WebkitUserSelect: 'text',
-  },
-};
 
 function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, disabled }) {
   const [value, setValue] = useState(() => inputCache.get(tabId) || '');
