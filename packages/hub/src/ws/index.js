@@ -73,6 +73,7 @@ function setupWebSocket(server) {
       }
 
       wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.emit('connection', ws, req);
         handleTerminalConnection(ws, session);
       });
       return;
@@ -93,6 +94,7 @@ function setupWebSocket(server) {
       if (session.userId !== userId) return rejectSocket(socket, 403, 'Forbidden');
 
       wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.emit('connection', ws, req);
         handleBrowserConnection(ws, session);
       });
       return;
