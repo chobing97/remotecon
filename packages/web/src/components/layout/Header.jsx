@@ -2,6 +2,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { NavLink } from 'react-router-dom';
 
 const navItems = [
+  { to: '/mobile', label: 'for Mobile' },
   { to: '/', label: 'Sessions' },
   { to: '/terminal', label: 'Terminal' },
   { to: '/recordings', label: 'Recordings' },

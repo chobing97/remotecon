@@ -6,6 +6,7 @@ import TerminalPage from './pages/TerminalPage';
 import RecordingsPage from './pages/RecordingsPage';
 import RecordingPlayerPage from './pages/RecordingPlayerPage';
 import WebhooksPage from './pages/WebhooksPage';
+import MobilePage from './pages/MobilePage';
 
 export const router = createBrowserRouter([
   {
@@ -17,6 +18,7 @@ export const router = createBrowserRouter([
     element: <App />,
     children: [
       { index: true, element: <SessionsPage /> },
+      { path: 'mobile', element: <MobilePage /> },
       { path: 'terminal', element: <TerminalPage /> },
       { path: 'recordings', element: <RecordingsPage /> },
       { path: 'recordings/:id', element: <RecordingPlayerPage /> },
