@@ -35,6 +35,12 @@
 /* xterm.js — horizontal scroll when terminal is wider than viewport */
 .xterm .xterm-viewport {
   overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile: allow touch scrolling on terminal viewport */
+.xterm .xterm-screen {
+  touch-action: pan-y;
 }
 
 :root {
