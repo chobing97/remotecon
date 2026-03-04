@@ -356,24 +356,15 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
           term.focus();
           lastTapTime = 0;
           onDirectInputChangeRef.current?.(true);
-          const restore = () => {
-            proxy.style.pointerEvents = '';
-            document.removeEventListener('touchstart', onDocTouch, true);
-            onDirectInputChangeRef.current?.(false);
-          };
-          // blur로 복원 (키보드 닫힐 때)
-          const textarea = term.textarea || container.querySelector('.xterm-helper-textarea');
-          if (textarea) {
-            textarea.addEventListener('blur', restore, { once: true });
-          }
-          // fallback: 다음 터치 시 복원
-          const onDocTouch = () => {
-            if (textarea) textarea.removeEventListener('blur', restore);
-            restore();
-          };
-          setTimeout(() => {
-            document.addEventListener('touchstart', onDocTouch, { once: true, capture: true });
-          }, 500);
+          // 포커스 상태를 주기적으로 확인하여 복원
+          const xtextarea = term.textarea || container.querySelector('.xterm-helper-textarea');
+          const checkFocus = setInterval(() => {
+            if (!xtextarea || document.activeElement !== xtextarea) {
+              clearInterval(checkFocus);
+              proxy.style.pointerEvents = '';
+              onDirectInputChangeRef.current?.(false);
+            }
+          }, 200);
         } else {
           lastTapTime = now;
         }

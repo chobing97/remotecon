@@ -277,7 +277,25 @@ function SelectOverlay({ termRef, onClose }) {
 
 function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, directInput, disabled }) {
   const [value, setValue] = useState(() => inputCache.get(tabId) || '');
+  const [kbOffset, setKbOffset] = useState(0);
   const textareaRef = useRef(null);
+
+  // directInput 모드에서 키보드 높이 추적
+  useEffect(() => {
+    if (!directInput) { setKbOffset(0); return; }
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      setKbOffset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
+    };
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    update();
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [directInput]);
 
   const submit = () => {
     if (disabled) return;
@@ -303,36 +321,57 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dir
 
   const disabledOpacity = disabled ? 0.4 : 1;
 
+  const keysRow = (
+    <div style={barStyles.keys}>
+      {specialKeys.map((k) => (
+        <button
+          key={k.label}
+          className="special-key"
+          onClick={() => !disabled && onSend(k.data)}
+          style={{ ...barStyles.key, opacity: disabledOpacity }}
+          disabled={disabled}
+        >
+          {k.label}
+        </button>
+      ))}
+      <button
+        className="special-key"
+        onClick={onToggleSelect}
+        style={{ ...barStyles.key, ...(selectMode ? { background: 'var(--blue)', color: '#fff' } : {}) }}
+      >
+        Select
+      </button>
+      <button
+        className="special-key"
+        onClick={onHide}
+        style={barStyles.key}
+      >
+        &#x25BC;
+      </button>
+    </div>
+  );
+
+  if (directInput) {
+    return (
+      <div style={{
+        position: 'fixed',
+        bottom: kbOffset,
+        left: 0,
+        right: 0,
+        zIndex: 100,
+        background: 'var(--bg-dark)',
+        borderTop: '1px solid var(--border)',
+        paddingBottom: 4,
+      }}>
+        {keysRow}
+      </div>
+    );
+  }
+
   return (
     <div style={barStyles.wrapper}>
-      <div style={barStyles.keys}>
-        {specialKeys.map((k) => (
-          <button
-            key={k.label}
-            className="special-key"
-            onClick={() => !disabled && onSend(k.data)}
-            style={{ ...barStyles.key, opacity: disabledOpacity }}
-            disabled={disabled}
-          >
-            {k.label}
-          </button>
-        ))}
-        <button
-          className="special-key"
-          onClick={onToggleSelect}
-          style={{ ...barStyles.key, ...(selectMode ? { background: 'var(--blue)', color: '#fff' } : {}) }}
-        >
-          Select
-        </button>
-        <button
-          className="special-key"
-          onClick={onHide}
-          style={barStyles.key}
-        >
-          &#x25BC;
-        </button>
-      </div>
-      {!directInput && <div style={barStyles.bar}>
+      {keysRow}
+      <div style={barStyles.bar}>
         <textarea
           ref={textareaRef}
           value={value}
@@ -353,7 +392,7 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dir
         >
           &#x23CE;
         </button>
-      </div>}
+      </div>
     </div>
   );
 }
