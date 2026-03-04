@@ -1,18 +1,20 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTabStore } from '../store/tabs';
 import TabBar from '../components/layout/TabBar';
 import TerminalView from '../components/terminal/TerminalView';
 
 export default function TerminalPage() {
   const { tabs, activeTabId } = useTabStore();
+  const navigate = useNavigate();
 
-  if (tabs.length === 0) {
-    return (
-      <div style={styles.empty}>
-        <p style={styles.emptyText}>No open terminals</p>
-        <p style={styles.emptyHint}>Select a session to connect</p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (tabs.length === 0) {
+      navigate('/', { replace: true });
+    }
+  }, [tabs.length, navigate]);
+
+  if (tabs.length === 0) return null;
 
   return (
     <div style={styles.page}>
@@ -21,6 +23,7 @@ export default function TerminalPage() {
         {tabs.map((tab) => (
           <TerminalView
             key={tab.id}
+            tabId={tab.id}
             sessionId={tab.sessionId}
             active={tab.id === activeTabId}
           />
@@ -33,7 +36,4 @@ export default function TerminalPage() {
 const styles = {
   page: { display: 'flex', flexDirection: 'column', height: '100%' },
   terminals: { flex: 1, position: 'relative', overflow: 'hidden' },
-  empty: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' },
-  emptyText: { fontSize: 16, color: 'var(--fg-dim)', marginBottom: 8 },
-  emptyHint: { fontSize: 13, color: 'var(--fg-dim)' },
 };

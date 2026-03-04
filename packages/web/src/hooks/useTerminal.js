@@ -6,13 +6,16 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { xtermTheme } from '../styles/theme';
 import { api } from '../api/client';
 
-export function useTerminal(sessionId) {
+export function useTerminal(sessionId, { onTerminated } = {}) {
   const termRef = useRef(null);
   const wsRef = useRef(null);
   const fitAddonRef = useRef(null);
   const containerRef = useRef(null);
   // CLI에서 보낸 크기가 있으면 fitAddon.fit() 사용하지 않음
   const cliSizeRef = useRef(null);
+  const terminatedTimerRef = useRef(null);
+  const onTerminatedRef = useRef(onTerminated);
+  onTerminatedRef.current = onTerminated;
 
   // CLI cols 기준으로 컨테이너 폭 설정 + 화면 높이에 맞춰 rows 계산
   function applyCliCols(term, cols) {
@@ -102,6 +105,17 @@ export function useTerminal(sessionId) {
           if (msg.type === 'resize' && msg.cols && msg.rows) {
             cliSizeRef.current = { cols: msg.cols, rows: msg.rows };
             applyCliCols(term, msg.cols);
+          } else if (msg.type === 'status' && msg.status === 'terminated') {
+            term.write('\r\n\x1b[91m[CLI terminated]\x1b[0m\r\n');
+            terminatedTimerRef.current = setTimeout(() => {
+              onTerminatedRef.current?.();
+            }, 10_000);
+          } else if (msg.type === 'status' && msg.status === 'connected') {
+            // CLI 재연결 시 자동 종료 타이머 취소
+            if (terminatedTimerRef.current) {
+              clearTimeout(terminatedTimerRef.current);
+              terminatedTimerRef.current = null;
+            }
           }
         } catch {
           // ignore
@@ -129,6 +143,10 @@ export function useTerminal(sessionId) {
   }, []);
 
   const dispose = useCallback(() => {
+    if (terminatedTimerRef.current) {
+      clearTimeout(terminatedTimerRef.current);
+      terminatedTimerRef.current = null;
+    }
     wsRef.current?.close();
     wsRef.current = null;
     termRef.current?.dispose();

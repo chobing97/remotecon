@@ -1,9 +1,16 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useTerminal } from '../../hooks/useTerminal';
+import { useTabStore } from '../../store/tabs';
 
-export default function TerminalView({ sessionId, active }) {
+export default function TerminalView({ sessionId, tabId, active }) {
   const containerRef = useRef(null);
-  const { attach, fit, dispose } = useTerminal(sessionId);
+  const closeTab = useTabStore((s) => s.closeTab);
+
+  const onTerminated = useCallback(() => {
+    closeTab(tabId);
+  }, [tabId, closeTab]);
+
+  const { attach, fit, dispose } = useTerminal(sessionId, { onTerminated });
   const attachedRef = useRef(false);
 
   useEffect(() => {
