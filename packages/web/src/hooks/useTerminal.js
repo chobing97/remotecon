@@ -6,7 +6,7 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { xtermTheme } from '../styles/theme';
 import { api } from '../api/client';
 
-export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, mobileReadOnly } = {}) {
+export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, onDirectInputChange, mobileReadOnly } = {}) {
   const termRef = useRef(null);
   const wsRef = useRef(null);
   const fitAddonRef = useRef(null);
@@ -24,6 +24,8 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
   onTerminatedRef.current = onTerminated;
   const onStatusChangeRef = useRef(onStatusChange);
   onStatusChangeRef.current = onStatusChange;
+  const onDirectInputChangeRef = useRef(onDirectInputChange);
+  onDirectInputChangeRef.current = onDirectInputChange;
 
   // CLI cols 기준으로 컨테이너 폭 설정 + 화면 높이에 맞춰 rows 계산
   function applyCliCols(term, cols) {
@@ -353,9 +355,11 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
           proxy.style.pointerEvents = 'none';
           term.focus();
           lastTapTime = 0;
+          onDirectInputChangeRef.current?.(true);
           const restore = () => {
             proxy.style.pointerEvents = '';
             document.removeEventListener('touchstart', onDocTouch, true);
+            onDirectInputChangeRef.current?.(false);
           };
           // blur로 복원 (키보드 닫힐 때)
           const textarea = term.textarea || container.querySelector('.xterm-helper-textarea');

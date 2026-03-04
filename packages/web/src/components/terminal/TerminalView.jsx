@@ -13,6 +13,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
   const [selectMode, setSelectMode] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [inputBarHidden, setInputBarHidden] = useState(false);
+  const [directInput, setDirectInput] = useState(false);
 
   // Select 모드 진입/해제 시 히스토리 관리 (뒤로가기 대응)
   const toggleSelectMode = useCallback(() => {
@@ -45,7 +46,11 @@ export default function TerminalView({ sessionId, tabId, active }) {
     setAutoScroll(v);
   }, []);
 
-  const { attach, fit, dispose, sendInput, termRef, scrollToBottom } = useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, mobileReadOnly: isMobile });
+  const onDirectInputChange = useCallback((v) => {
+    setDirectInput(v);
+  }, []);
+
+  const { attach, fit, dispose, sendInput, termRef, scrollToBottom } = useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, onDirectInputChange, mobileReadOnly: isMobile });
   const attachedRef = useRef(false);
 
   useEffect(() => {
@@ -151,7 +156,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
           &#x2328;
         </button>
       )}
-      {isMobile && !inputBarHidden && <MobileInputBar tabId={tabId} onSend={sendInput} selectMode={selectMode} onToggleSelect={toggleSelectMode} onHide={() => setInputBarHidden(true)} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
+      {isMobile && !inputBarHidden && <MobileInputBar tabId={tabId} onSend={sendInput} selectMode={selectMode} onToggleSelect={toggleSelectMode} onHide={() => setInputBarHidden(true)} directInput={directInput} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
     </div>
   );
 }
@@ -270,7 +275,7 @@ function SelectOverlay({ termRef, onClose }) {
   );
 }
 
-function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, disabled }) {
+function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, directInput, disabled }) {
   const [value, setValue] = useState(() => inputCache.get(tabId) || '');
   const textareaRef = useRef(null);
 
@@ -327,7 +332,7 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dis
           &#x25BC;
         </button>
       </div>
-      <div style={barStyles.bar}>
+      {!directInput && <div style={barStyles.bar}>
         <textarea
           ref={textareaRef}
           value={value}
@@ -348,7 +353,7 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dis
         >
           &#x23CE;
         </button>
-      </div>
+      </div>}
     </div>
   );
 }
