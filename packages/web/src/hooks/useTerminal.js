@@ -145,6 +145,12 @@ export function useTerminal(sessionId, { onTerminated } = {}) {
     }
   }, []);
 
+  const sendInput = useCallback((data) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'input', data }));
+    }
+  }, []);
+
   const dispose = useCallback(() => {
     if (terminatedTimerRef.current) {
       clearTimeout(terminatedTimerRef.current);
@@ -161,7 +167,7 @@ export function useTerminal(sessionId, { onTerminated } = {}) {
     return () => dispose();
   }, [dispose]);
 
-  return { attach, fit, dispose, termRef, wsRef };
+  return { attach, fit, dispose, sendInput, termRef, wsRef };
 }
 
 function setupMobileTouchScroll(container) {
