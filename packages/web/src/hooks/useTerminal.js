@@ -14,6 +14,8 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
   // CLI에서 보낸 크기가 있으면 fitAddon.fit() 사용하지 않음
   const cliSizeRef = useRef(null);
   const terminatedTimerRef = useRef(null);
+  const reconnectTimerRef = useRef(null);
+  const disposedRef = useRef(false);
   const onTerminatedRef = useRef(onTerminated);
   onTerminatedRef.current = onTerminated;
   const onStatusChangeRef = useRef(onStatusChange);
@@ -71,6 +73,16 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
     termRef.current = term;
     fitAddonRef.current = fitAddon;
 
+    disposedRef.current = false;
+
+    if (!mobileReadOnly) {
+      term.onData((data) => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: 'input', data }));
+        }
+      });
+    }
+
     connect(term);
 
     const onResize = () => {
@@ -119,11 +131,12 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
             }, 10_000);
           } else if (msg.type === 'status' && msg.status === 'connected') {
             onStatusChangeRef.current?.('connected');
-            // CLI 재연결 시 자동 종료 타이머 취소
             if (terminatedTimerRef.current) {
               clearTimeout(terminatedTimerRef.current);
               terminatedTimerRef.current = null;
             }
+          } else if (msg.type === 'status' && msg.status === 'reconnecting') {
+            onStatusChangeRef.current?.('disconnected');
           }
         } catch {
           // ignore
@@ -133,15 +146,16 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
 
     ws.onclose = () => {
       onStatusChangeRef.current?.('disconnected');
+      // 자동 재접속 (disposed 또는 terminated가 아닌 경우)
+      if (!disposedRef.current) {
+        reconnectTimerRef.current = setTimeout(() => {
+          if (!disposedRef.current && termRef.current) {
+            connect(termRef.current);
+          }
+        }, 3000);
+      }
     };
 
-    if (!mobileReadOnly) {
-      term.onData((data) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'input', data }));
-        }
-      });
-    }
   }, [sessionId]);
 
   const fit = useCallback(() => {
@@ -159,9 +173,14 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
   }, []);
 
   const dispose = useCallback(() => {
+    disposedRef.current = true;
     if (terminatedTimerRef.current) {
       clearTimeout(terminatedTimerRef.current);
       terminatedTimerRef.current = null;
+    }
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
     }
     wsRef.current?.close();
     wsRef.current = null;

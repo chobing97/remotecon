@@ -64,7 +64,6 @@ const specialKeys = [
   { label: 'Esc', data: '\x1b' },
   { label: 'Tab', data: '\t' },
   { label: 'S-Tab', data: '\x1b[Z' },
-  { label: 'Enter', data: '\r' },
   { label: 'C-c', data: '\x03' },
   { label: 'C-d', data: '\x04' },
   { label: 'C-e', data: '\x05' },
