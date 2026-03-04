@@ -25,6 +25,7 @@ Commands:
   remotecon login           Authenticate with Google (Device Flow)
   remotecon logout          Clear saved credentials
   remotecon status          Show connection status
+  remotecon disconnect      Disconnect running session (alias: discon)
   remotecon ls              List active sessions
   remotecon webhooks        List webhooks
   remotecon webhooks add    Add a webhook
@@ -50,6 +51,9 @@ function run() {
       return require('../src/commands/logout')();
     case 'status':
       return require('../src/commands/status')();
+    case 'disconnect':
+    case 'discon':
+      return require('../src/commands/disconnect')();
     case 'ls':
       return require('../src/commands/sessions')();
     case 'webhooks':
