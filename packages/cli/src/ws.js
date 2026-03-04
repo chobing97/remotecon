@@ -119,6 +119,7 @@ function connectToHub({ hubUrl, sessionId, sessionName, getToken, pty, onConnect
 
     ws.on('unexpected-response', (req, res) => {
       slog(`unexpected-response: HTTP ${res.statusCode}`);
+      scheduleReconnect();
     });
   }
 
