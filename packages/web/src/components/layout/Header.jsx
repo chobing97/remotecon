@@ -21,6 +21,7 @@ export default function Header() {
               key={item.to}
               to={item.to}
               end={item.to === '/'}
+              replace={item.to === '/'}
               style={({ isActive }) => ({
                 ...styles.link,
                 color: isActive ? 'var(--blue)' : 'var(--fg-dim)',
