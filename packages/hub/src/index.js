@@ -46,7 +46,8 @@ app.use(apiRoutes);
 // ── 정적 파일 (React 프로덕션 빌드) ──────────────────────
 // __dirname 기준 상대경로 + cwd 기준 절대경로 모두 시도
 const webDistCandidates = [
-  path.join(__dirname, '../../web/dist'),
+  path.join(__dirname, '../web-dist'),           // Railway: 빌드 시 hub 안에 복사됨
+  path.join(__dirname, '../../web/dist'),         // 로컬 개발
   path.join(process.cwd(), 'packages/web/dist'),
 ];
 const webDist = webDistCandidates.find(p => fs.existsSync(p)) || webDistCandidates[0];

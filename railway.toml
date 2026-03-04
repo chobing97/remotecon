@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd packages/web && npm install --include=dev && npm run build"
+buildCommand = "cd packages/web && npm install --include=dev && npm run build && cp -r dist ../../packages/hub/web-dist"
 
 [deploy]
 startCommand = "node packages/hub/src/index.js"
