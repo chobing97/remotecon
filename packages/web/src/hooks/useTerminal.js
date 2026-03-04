@@ -72,7 +72,13 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
     term.unicode.activeVersion = '11';
     term.open(element);
     fitAddon.fit();
-    scrollToBottomRef.current = setupMobileTouchScroll(element, (v) => onAutoScrollChangeRef.current?.(v));
+    scrollToBottomRef.current = setupMobileTouchScroll(element, term, () => {
+      if (cliSizeRef.current) {
+        applyCliCols(term, cliSizeRef.current.cols);
+      } else {
+        fitAddon.fit();
+      }
+    }, (v) => onAutoScrollChangeRef.current?.(v));
 
     termRef.current = term;
     fitAddonRef.current = fitAddon;
@@ -226,7 +232,7 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
   return { attach, fit, dispose, sendInput, termRef, wsRef, scrollToBottom };
 }
 
-function setupMobileTouchScroll(container, onAutoScrollChange) {
+function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
   if (!('ontouchstart' in window)) return null;
 
   const viewport = container.querySelector('.xterm-viewport');
@@ -243,7 +249,7 @@ function setupMobileTouchScroll(container, onAutoScrollChange) {
     top: '0', left: '0', right: '0', bottom: '0',
     overflowY: 'auto',
     zIndex: '10',
-    touchAction: 'manipulation',
+    touchAction: 'pan-x pan-y',
     overscrollBehaviorY: 'contain',
   });
   spacer.style.cssText = `height:${scrollArea.offsetHeight}px;width:1px;pointer-events:none`;
@@ -291,6 +297,51 @@ function setupMobileTouchScroll(container, onAutoScrollChange) {
     }
   });
   ro.observe(scrollArea);
+
+  // Pinch-to-zoom: fontSize 동적 변경
+  let pinching = false;
+  let pinchStartDist = 0;
+  let pinchBaseFontSize = 14;
+  let pinchFitTimer = null;
+
+  function getTouchDist(t1, t2) {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  proxy.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      pinching = true;
+      pinchStartDist = getTouchDist(e.touches[0], e.touches[1]);
+      pinchBaseFontSize = term.options.fontSize || 14;
+    }
+  }, { passive: true });
+
+  proxy.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && pinching) {
+      e.preventDefault();
+      const dist = getTouchDist(e.touches[0], e.touches[1]);
+      const scale = dist / pinchStartDist;
+      const newSize = Math.round(pinchBaseFontSize * scale);
+      const clamped = Math.max(8, Math.min(32, newSize));
+      if (clamped !== term.options.fontSize) {
+        term.options.fontSize = clamped;
+        clearTimeout(pinchFitTimer);
+        pinchFitTimer = setTimeout(() => onFit(), 50);
+      }
+    }
+  }, { passive: false });
+
+  proxy.addEventListener('touchend', () => {
+    if (pinching) {
+      pinching = false;
+      pinchStartDist = 0;
+      clearTimeout(pinchFitTimer);
+      onFit();
+      spacer.style.height = scrollArea.offsetHeight + 'px';
+    }
+  }, { passive: true });
 
   // scrollToBottom 함수 반환
   return () => {
