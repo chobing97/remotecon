@@ -148,44 +148,61 @@ function setupMobileTouchScroll(container) {
   const screen = container.querySelector('.xterm-screen');
   if (!viewport || !screen) return;
 
+  let startY = 0;
   let lastY = 0;
   let velocity = 0;
   let lastTime = 0;
   let momentumId = null;
+  let isScrolling = false;
+
+  const SCROLL_THRESHOLD = 5;
+  const FRICTION = 0.95;
+  const MIN_VELOCITY = 0.05;
 
   screen.addEventListener('touchstart', (e) => {
     if (momentumId) {
       cancelAnimationFrame(momentumId);
       momentumId = null;
     }
-    lastY = e.touches[0].clientY;
+    startY = lastY = e.touches[0].clientY;
     lastTime = performance.now();
     velocity = 0;
-  }, { passive: true });
+    isScrolling = false;
+  }, { passive: true, capture: true });
 
   screen.addEventListener('touchmove', (e) => {
+    const y = e.touches[0].clientY;
     const now = performance.now();
     const dt = now - lastTime;
-    if (dt > 0) {
-      velocity = (lastY - e.touches[0].clientY) / dt;
+
+    if (!isScrolling && Math.abs(y - startY) > SCROLL_THRESHOLD) {
+      isScrolling = true;
     }
-    lastY = e.touches[0].clientY;
+
+    if (isScrolling) {
+      // xterm 내부 터치 핸들러 차단 (줄 단위 스크롤 방지)
+      e.stopPropagation();
+      const dy = lastY - y;
+      viewport.scrollTop += dy;
+      if (dt > 0) velocity = dy / dt;
+    }
+
+    lastY = y;
     lastTime = now;
-  }, { passive: true });
+  }, { passive: true, capture: true });
 
   screen.addEventListener('touchend', () => {
-    const friction = 0.95;
-    const stop = 0.05;
+    if (!isScrolling) return;
 
     function step() {
-      velocity *= friction;
-      if (Math.abs(velocity) < stop) return;
+      velocity *= FRICTION;
+      if (Math.abs(velocity) < MIN_VELOCITY) return;
       viewport.scrollTop += velocity * 16;
       momentumId = requestAnimationFrame(step);
     }
 
-    if (Math.abs(velocity) > stop) {
+    if (Math.abs(velocity) > MIN_VELOCITY) {
       momentumId = requestAnimationFrame(step);
     }
-  }, { passive: true });
+  }, { passive: true, capture: true });
 }
