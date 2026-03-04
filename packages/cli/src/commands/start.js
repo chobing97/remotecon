@@ -1,5 +1,6 @@
 'use strict';
 
+const os = require('os');
 const https = require('https');
 const http = require('http');
 const path = require('path');
@@ -43,7 +44,9 @@ function registerSession(hubUrl, name, idToken, record) {
 }
 
 async function start(sessionName, options = {}) {
-  const baseName = sessionName || path.basename(process.cwd());
+  const hostname = os.hostname().replace(/\.local$/, '');
+  const label = sessionName || path.basename(process.cwd());
+  const baseName = `${hostname}/${label}`;
   const name = generateUniqueName(baseName);
   const record = !!options.record;
 
