@@ -21,23 +21,26 @@ function log(msg) {
 /**
  * Hub 서버의 /ws/terminal 에 연결하고 PTY I/O를 중계합니다.
  */
-function connectToHub({ hubUrl, sessionId, getToken, pty, onConnected, onDisconnect }) {
+function connectToHub({ hubUrl, sessionId, sessionName, getToken, pty, onConnected, onDisconnect }) {
   const wsUrl = hubUrl.replace(/^http/, 'ws') + `/ws/terminal?sessionId=${sessionId}`;
+  const tag = sessionName || sessionId.slice(0, 8);
   let ws;
   let closed = false;
   let connected = false;
   let delay = RECONNECT_DELAY;
 
+  function slog(msg) { log(`[${tag}] ${msg}`); }
+
   async function connect() {
     if (closed) return;
 
-    log(`connect attempt (delay=${delay}ms)`);
+    slog(`connect attempt (delay=${delay}ms)`);
 
     let token;
     try {
       token = await getToken();
     } catch (err) {
-      log(`token refresh failed: ${err.message}`);
+      slog(`token refresh failed: ${err.message}`);
       scheduleReconnect();
       return;
     }
@@ -49,16 +52,16 @@ function connectToHub({ hubUrl, sessionId, getToken, pty, onConnected, onDisconn
     ws.on('open', () => {
       connected = true;
       delay = RECONNECT_DELAY;
-      log('connected');
+      slog('connected');
       onConnected?.();
     });
 
     ws.on('ping', () => {
-      log('ping received');
+      slog('ping received');
     });
 
     ws.on('pong', () => {
-      log('pong received');
+      slog('pong received');
     });
 
     ws.on('message', (data, isBinary) => {
@@ -85,10 +88,10 @@ function connectToHub({ hubUrl, sessionId, getToken, pty, onConnected, onDisconn
     ws.on('close', (code, reason) => {
       const wasConnected = connected;
       connected = false;
-      log(`close code=${code} reason=${reason || ''} wasConnected=${wasConnected}`);
+      slog(`close code=${code} reason=${reason || ''} wasConnected=${wasConnected}`);
 
       if (code === 4001) {
-        log('session deleted by server — exiting');
+        slog('session deleted by server — exiting');
         closed = true;
         pty.kill();
         return;
@@ -99,17 +102,17 @@ function connectToHub({ hubUrl, sessionId, getToken, pty, onConnected, onDisconn
     });
 
     ws.on('error', (err) => {
-      log(`error: ${err.message}`);
+      slog(`error: ${err.message}`);
     });
 
     ws.on('unexpected-response', (req, res) => {
-      log(`unexpected-response: HTTP ${res.statusCode}`);
+      slog(`unexpected-response: HTTP ${res.statusCode}`);
     });
   }
 
   function scheduleReconnect() {
     if (closed) return;
-    log(`reconnect scheduled in ${delay}ms`);
+    slog(`reconnect scheduled in ${delay}ms`);
     setTimeout(connect, delay);
     delay = Math.min(delay * 1.5, MAX_RECONNECT_DELAY);
   }

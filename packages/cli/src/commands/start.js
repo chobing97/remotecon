@@ -75,6 +75,7 @@ async function start(sessionName, options = {}) {
   const hub = connectToHub({
     hubUrl: config.HUB_URL,
     sessionId,
+    sessionName: name,
     getToken: () => getIdToken(config.DEVICE_CLIENT_ID, config.DEVICE_CLIENT_SECRET),
     pty: ptyProcess,
     onConnected: () => {
