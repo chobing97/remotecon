@@ -144,65 +144,59 @@ export function useTerminal(sessionId) {
 }
 
 function setupMobileTouchScroll(container) {
+  if (!('ontouchstart' in window)) return;
+
   const viewport = container.querySelector('.xterm-viewport');
-  const screen = container.querySelector('.xterm-screen');
-  if (!viewport || !screen) return;
+  const scrollArea = container.querySelector('.xterm-scroll-area');
+  if (!viewport || !scrollArea) return;
 
-  let startY = 0;
-  let lastY = 0;
-  let velocity = 0;
-  let lastTime = 0;
-  let momentumId = null;
-  let isScrolling = false;
+  // 투명 스크롤 프록시 — 브라우저 네이티브 관성 스크롤 사용
+  const proxy = document.createElement('div');
+  const spacer = document.createElement('div');
 
-  const SCROLL_THRESHOLD = 5;
-  const FRICTION = 0.95;
-  const MIN_VELOCITY = 0.05;
+  proxy.className = 'touch-scroll-proxy';
+  Object.assign(proxy.style, {
+    position: 'absolute',
+    top: '0', left: '0', right: '0', bottom: '0',
+    overflowY: 'auto',
+    zIndex: '10',
+    touchAction: 'pan-y',
+  });
+  spacer.style.cssText = `height:${scrollArea.offsetHeight}px;width:1px;pointer-events:none`;
+  proxy.appendChild(spacer);
 
-  screen.addEventListener('touchstart', (e) => {
-    if (momentumId) {
-      cancelAnimationFrame(momentumId);
-      momentumId = null;
+  container.style.position = 'relative';
+  container.appendChild(proxy);
+
+  // 스크롤 동기화: proxy → viewport
+  let isUserScrolling = false;
+  proxy.addEventListener('scroll', () => {
+    isUserScrolling = true;
+    viewport.scrollTop = proxy.scrollTop;
+    requestAnimationFrame(() => { isUserScrolling = false; });
+  }, { passive: true });
+
+  // 스크롤 동기화: viewport → proxy (새 출력으로 자동 스크롤 시)
+  viewport.addEventListener('scroll', () => {
+    if (isUserScrolling) return;
+    proxy.scrollTop = viewport.scrollTop;
+  }, { passive: true });
+
+  // scroll-area 높이 변경 감시 (새 출력 도착 시)
+  const ro = new ResizeObserver(() => {
+    spacer.style.height = scrollArea.offsetHeight + 'px';
+    if (!isUserScrolling) proxy.scrollTop = viewport.scrollTop;
+  });
+  ro.observe(scrollArea);
+
+  // 탭 → xterm 포커스 (키보드 열기)
+  let touchY = 0;
+  proxy.addEventListener('touchstart', (e) => {
+    touchY = e.touches[0].clientY;
+  }, { passive: true });
+  proxy.addEventListener('touchend', (e) => {
+    if (Math.abs(e.changedTouches[0].clientY - touchY) < 10) {
+      container.querySelector('.xterm-helper-textarea')?.focus();
     }
-    startY = lastY = e.touches[0].clientY;
-    lastTime = performance.now();
-    velocity = 0;
-    isScrolling = false;
-  }, { passive: true, capture: true });
-
-  screen.addEventListener('touchmove', (e) => {
-    const y = e.touches[0].clientY;
-    const now = performance.now();
-    const dt = now - lastTime;
-
-    if (!isScrolling && Math.abs(y - startY) > SCROLL_THRESHOLD) {
-      isScrolling = true;
-    }
-
-    if (isScrolling) {
-      // xterm 내부 터치 핸들러 차단 (줄 단위 스크롤 방지)
-      e.stopPropagation();
-      const dy = lastY - y;
-      viewport.scrollTop += dy;
-      if (dt > 0) velocity = dy / dt;
-    }
-
-    lastY = y;
-    lastTime = now;
-  }, { passive: true, capture: true });
-
-  screen.addEventListener('touchend', () => {
-    if (!isScrolling) return;
-
-    function step() {
-      velocity *= FRICTION;
-      if (Math.abs(velocity) < MIN_VELOCITY) return;
-      viewport.scrollTop += velocity * 16;
-      momentumId = requestAnimationFrame(step);
-    }
-
-    if (Math.abs(velocity) > MIN_VELOCITY) {
-      momentumId = requestAnimationFrame(step);
-    }
-  }, { passive: true, capture: true });
+  }, { passive: true });
 }

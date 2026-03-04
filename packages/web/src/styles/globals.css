@@ -38,9 +38,19 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Mobile: allow touch scrolling on terminal viewport */
+/* Mobile: xterm-screen 터치는 프록시가 처리 */
 .xterm .xterm-screen {
-  touch-action: pan-y;
+  touch-action: none;
+}
+
+/* 스크롤 프록시 스크롤바 숨김 */
+.touch-scroll-proxy {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.touch-scroll-proxy::-webkit-scrollbar {
+  display: none;
 }
 
 :root {
