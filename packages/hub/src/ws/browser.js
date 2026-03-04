@@ -17,7 +17,7 @@ function handleBrowserConnection(ws, session) {
 
   // 현재 상태 전송
   if (ws.readyState === WebSocket.OPEN) {
-    ws.send(encode(MSG.STATUS, { online: !!session.terminalWs }));
+    ws.send(encode(MSG.STATUS, { status: session.terminalWs ? 'connected' : 'reconnecting' }));
     ws.send(encode(MSG.SESSION_INFO, {
       name: session.name,
       recording: session.recording,

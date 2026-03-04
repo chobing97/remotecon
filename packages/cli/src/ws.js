@@ -132,7 +132,7 @@ function connectToHub({ hubUrl, sessionId, sessionName, getToken, pty, onConnect
     },
     close() {
       closed = true;
-      ws?.close();
+      ws?.close(4000, 'intentional');
     },
     getStatus() {
       if (closed) return 'closed';

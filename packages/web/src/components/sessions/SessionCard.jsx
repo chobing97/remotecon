@@ -8,7 +8,7 @@ export default function SessionCard({ session, onConnect, onDelete }) {
           <span
             style={{
               ...styles.dot,
-              background: session.online ? 'var(--green)' : 'var(--fg-dim)',
+              background: session.status === 'connected' ? 'var(--green)' : 'var(--yellow)',
             }}
           />
           <span style={styles.name}>{session.name}</span>

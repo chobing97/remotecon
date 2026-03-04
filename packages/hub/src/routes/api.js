@@ -24,7 +24,7 @@ router.get('/api/sessions', requireAuth, (req, res) => {
     id: s.id,
     name: s.name,
     createdAt: s.createdAt,
-    online: !!s.terminalWs,
+    status: s.terminalWs ? 'connected' : 'reconnecting',
     viewers: s.browserWss?.size ?? 0,
     recording: s.recording,
   }));

@@ -14,7 +14,7 @@ function handleTerminalConnection(ws, session) {
   }
 
   session.terminalWs = ws;
-  broadcastText(session, encode(MSG.STATUS, { online: true }));
+  broadcastText(session, encode(MSG.STATUS, { status: 'connected' }));
 
   // 세션 정보 전송
   broadcastText(session, encode(MSG.SESSION_INFO, {
@@ -52,9 +52,8 @@ function handleTerminalConnection(ws, session) {
     }
   });
 
-  ws.on('close', () => {
+  ws.on('close', (code) => {
     session.terminalWs = null;
-    broadcastText(session, encode(MSG.STATUS, { online: false }));
 
     // 녹화 중이면 저장
     if (isRecording(session.id)) {
@@ -63,10 +62,19 @@ function handleTerminalConnection(ws, session) {
       });
     }
 
-    session._deleteTimer = setTimeout(() => {
+    if (code === 4000) {
+      // CLI가 의도적으로 종료 → 즉시 삭제
+      broadcastText(session, encode(MSG.STATUS, { status: 'terminated' }));
       deleteSession(session.id);
       session.browserWss.forEach(bws => bws.close());
-    }, 60_000);
+    } else {
+      // 네트워크 끊김 등 → 재연결 대기
+      broadcastText(session, encode(MSG.STATUS, { status: 'reconnecting' }));
+      session._deleteTimer = setTimeout(() => {
+        deleteSession(session.id);
+        session.browserWss.forEach(bws => bws.close());
+      }, 60_000);
+    }
   });
 
   ws.on('error', (err) => {
