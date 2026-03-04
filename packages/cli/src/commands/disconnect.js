@@ -1,10 +1,7 @@
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
 const { execSync } = require('child_process');
-
-const STATUS_FILE = path.join(process.env.HOME || '~', '.remotecon', 'status.json');
+const { getAliveSessions, removeSession } = require('../status-db');
 
 function getAncestorPids() {
   const pids = [];
@@ -40,7 +37,7 @@ function showSessionList(alive) {
   process.stderr.write(`\n종료하려면: remotecon disconnect <이름|PID>\n`);
 }
 
-function killAndCleanup(targets, alive) {
+function killAndCleanup(targets) {
   for (const data of targets) {
     try {
       process.kill(data.pid, 'SIGTERM');
@@ -48,35 +45,15 @@ function killAndCleanup(targets, alive) {
     } catch {
       process.stderr.write(`[remotecon] 이미 종료됨: ${data.session} (PID ${data.pid})\n`);
     }
+    removeSession(data.pid);
   }
-
-  const remaining = alive.filter(s => !targets.includes(s));
-  try {
-    if (remaining.length === 0) {
-      fs.unlinkSync(STATUS_FILE);
-    } else {
-      fs.writeFileSync(STATUS_FILE, JSON.stringify(remaining, null, 2));
-    }
-  } catch {}
 }
 
 function disconnect(target) {
-  let list;
-  try {
-    const parsed = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf8'));
-    list = Array.isArray(parsed) ? parsed : [parsed];
-  } catch {
-    process.stderr.write('[remotecon] 실행 중인 세션이 없습니다.\n');
-    return;
-  }
-
-  const alive = list.filter(data => {
-    try { process.kill(data.pid, 0); return true; } catch { return false; }
-  });
+  const alive = getAliveSessions();
 
   if (alive.length === 0) {
     process.stderr.write('[remotecon] 실행 중인 세션이 없습니다.\n');
-    try { fs.unlinkSync(STATUS_FILE); } catch {}
     return;
   }
 
@@ -87,14 +64,14 @@ function disconnect(target) {
       process.stderr.write(`[remotecon] '${target}' 세션을 찾을 수 없습니다.\n`);
       return;
     }
-    killAndCleanup(matches, alive);
+    killAndCleanup(matches);
     return;
   }
 
   // 인자 없음: 상위 프로세스에 remotecon 세션이 있으면 그것만 종료
   const parent = findParentSession(alive);
   if (parent) {
-    killAndCleanup([parent], alive);
+    killAndCleanup([parent]);
   } else {
     showSessionList(alive);
   }

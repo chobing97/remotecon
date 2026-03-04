@@ -1,6 +1,5 @@
 'use strict';
 
-const fs = require('fs');
 const https = require('https');
 const http = require('http');
 const path = require('path');
@@ -8,39 +7,7 @@ const { getIdToken } = require('../auth');
 const { connectToHub } = require('../ws');
 const { spawnPty } = require('../pty');
 const config = require('../config');
-
-const STATUS_DIR = path.join(process.env.HOME || '~', '.remotecon');
-const STATUS_FILE = path.join(STATUS_DIR, 'status.json');
-
-function readStatuses() {
-  try {
-    const content = fs.readFileSync(STATUS_FILE, 'utf8');
-    const parsed = JSON.parse(content);
-    return Array.isArray(parsed) ? parsed : [parsed];
-  } catch {
-    return [];
-  }
-}
-
-function writeStatus(data) {
-  try {
-    fs.mkdirSync(STATUS_DIR, { recursive: true });
-    const list = readStatuses().filter(s => s.pid !== data.pid);
-    list.push(data);
-    fs.writeFileSync(STATUS_FILE, JSON.stringify(list, null, 2));
-  } catch {}
-}
-
-function clearStatus() {
-  try {
-    const list = readStatuses().filter(s => s.pid !== process.pid);
-    if (list.length === 0) {
-      fs.unlinkSync(STATUS_FILE);
-    } else {
-      fs.writeFileSync(STATUS_FILE, JSON.stringify(list, null, 2));
-    }
-  } catch {}
-}
+const { upsertSession, updateStatus, removeSession, generateUniqueName } = require('../status-db');
 
 function registerSession(hubUrl, name, idToken, record) {
   return new Promise((resolve, reject) => {
@@ -76,7 +43,8 @@ function registerSession(hubUrl, name, idToken, record) {
 }
 
 async function start(sessionName, options = {}) {
-  const name = sessionName || path.basename(process.cwd());
+  const baseName = sessionName || path.basename(process.cwd());
+  const name = generateUniqueName(baseName);
   const record = !!options.record;
 
   const idToken = await getIdToken(config.DEVICE_CLIENT_ID, config.DEVICE_CLIENT_SECRET);
@@ -87,9 +55,7 @@ async function start(sessionName, options = {}) {
   process.stderr.write(`\x1b[2m[remotecon] 세션: ${name}${record ? ' (녹화 중)' : ''}\x1b[0m\n`);
   process.stderr.write(`\x1b[2m[remotecon] 모바일: ${config.HUB_URL}\x1b[0m\n`);
 
-  const statusBase = { session: name, sessionId, server: config.HUB_URL, pid: process.pid };
-
-  writeStatus({ ...statusBase, status: 'connecting' });
+  upsertSession({ pid: process.pid, session: name, sessionId, server: config.HUB_URL, status: 'connecting' });
 
   const hub = connectToHub({
     hubUrl: config.HUB_URL,
@@ -98,11 +64,11 @@ async function start(sessionName, options = {}) {
     getToken: () => getIdToken(config.DEVICE_CLIENT_ID, config.DEVICE_CLIENT_SECRET),
     pty: ptyProcess,
     onConnected: () => {
-      writeStatus({ ...statusBase, status: 'connected' });
+      updateStatus(process.pid, 'connected');
       hub.sendResize(process.stdout.columns || 120, process.stdout.rows || 35);
     },
     onDisconnect: () => {
-      writeStatus({ ...statusBase, status: 'reconnecting' });
+      updateStatus(process.pid, 'reconnecting');
     },
   });
 
@@ -130,7 +96,7 @@ async function start(sessionName, options = {}) {
 
   ptyProcess.onExit(({ exitCode }) => {
     hub.close();
-    clearStatus();
+    removeSession(process.pid);
     if (process.stdin.isTTY) process.stdin.setRawMode(false);
     process.stderr.write(`\r\n\x1b[2m[remotecon] 세션 종료 (exit ${exitCode})\x1b[0m\r\n`);
     process.exit(exitCode);

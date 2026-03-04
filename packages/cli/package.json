@@ -10,6 +10,7 @@
   "dependencies": {
     "google-auth-library": "^9.15.1",
     "node-pty": "^1.1.0",
-    "ws": "^8.18.1"
+    "ws": "^8.18.1",
+    "better-sqlite3": "^11.7.0"
   }
 }

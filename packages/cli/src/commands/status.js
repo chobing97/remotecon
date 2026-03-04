@@ -1,35 +1,9 @@
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
-
-const STATUS_FILE = path.join(process.env.HOME || '~', '.remotecon', 'status.json');
+const { getAliveSessions } = require('../status-db');
 
 function status() {
-  let list;
-  try {
-    const parsed = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf8'));
-    list = Array.isArray(parsed) ? parsed : [parsed];
-  } catch {
-    process.stderr.write('[remotecon] 실행 중인 세션이 없습니다.\n');
-    return;
-  }
-
-  // 살아있는 프로세스만 필터링
-  const alive = list.filter(data => {
-    try { process.kill(data.pid, 0); return true; } catch { return false; }
-  });
-
-  // 죽은 프로세스가 있으면 파일 정리
-  if (alive.length !== list.length) {
-    try {
-      if (alive.length === 0) {
-        fs.unlinkSync(STATUS_FILE);
-      } else {
-        fs.writeFileSync(STATUS_FILE, JSON.stringify(alive, null, 2));
-      }
-    } catch {}
-  }
+  const alive = getAliveSessions();
 
   if (alive.length === 0) {
     process.stderr.write('[remotecon] 실행 중인 세션이 없습니다.\n');
