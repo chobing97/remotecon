@@ -35,6 +35,22 @@ setInterval(() => {
 function setupWebSocket(server) {
   const wss = new WebSocketServer({ noServer: true });
 
+  // Ping every 30s to keep connections alive through Railway proxy
+  const pingInterval = setInterval(() => {
+    wss.clients.forEach(ws => {
+      if (ws.isAlive === false) return ws.terminate();
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, 30_000);
+
+  wss.on('connection', (ws) => {
+    ws.isAlive = true;
+    ws.on('pong', () => { ws.isAlive = true; });
+  });
+
+  wss.on('close', () => clearInterval(pingInterval));
+
   server.on('upgrade', async (req, socket, head) => {
     const url = new URL(req.url, 'http://localhost');
 
