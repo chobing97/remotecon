@@ -77,7 +77,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
     >
       {!isMobile && (
         <button
-          onClick={() => closeTab(tabId)}
+          onClick={() => { if (window.confirm('세션을 닫으시겠습니까?')) closeTab(tabId); }}
           style={{
             position: 'absolute',
             top: 6,
