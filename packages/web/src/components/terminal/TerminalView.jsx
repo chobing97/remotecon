@@ -79,7 +79,11 @@ function MobileInputBar({ onSend }) {
   const textareaRef = useRef(null);
 
   const submit = () => {
-    if (!value) return;
+    if (!value) {
+      // 빈 상태에서 버튼 누르면 엔터 전송
+      onSend('\r');
+      return;
+    }
     // 각 줄을 \r로 구분하여 전송
     const lines = value.split('\n');
     onSend(lines.join('\r') + '\r');
@@ -93,13 +97,6 @@ function MobileInputBar({ onSend }) {
     const ta = e.target;
     ta.style.height = '36px';
     ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      submit();
-    }
   };
 
   return (
@@ -121,7 +118,6 @@ function MobileInputBar({ onSend }) {
           ref={textareaRef}
           value={value}
           onChange={handleInput}
-          onKeyDown={handleKeyDown}
           placeholder="command..."
           autoComplete="off"
           autoCorrect="off"
