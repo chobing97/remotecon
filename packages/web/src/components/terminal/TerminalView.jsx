@@ -3,11 +3,13 @@ import { useTerminal } from '../../hooks/useTerminal';
 import { useTabStore } from '../../store/tabs';
 
 const isMobile = 'ontouchstart' in globalThis;
+const inputCache = new Map();
 
 export default function TerminalView({ sessionId, tabId, active }) {
   const containerRef = useRef(null);
   const closeTab = useTabStore((s) => s.closeTab);
   const setTabStatus = useTabStore((s) => s.setTabStatus);
+  const tabStatus = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.status);
 
   const onTerminated = useCallback(() => {
     closeTab(tabId);
@@ -17,7 +19,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
     setTabStatus(tabId, status);
   }, [tabId, setTabStatus]);
 
-  const { attach, fit, dispose, sendInput } = useTerminal(sessionId, { onTerminated, onStatusChange });
+  const { attach, fit, dispose, sendInput } = useTerminal(sessionId, { onTerminated, onStatusChange, mobileReadOnly: isMobile });
   const attachedRef = useRef(false);
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
           style={{ minWidth: '100%', height: '100%' }}
         />
       </div>
-      {isMobile && <MobileInputBar onSend={sendInput} />}
+      {isMobile && <MobileInputBar tabId={tabId} onSend={sendInput} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
     </div>
   );
 }
@@ -74,30 +76,33 @@ const specialKeys = [
   { label: '\u2192', data: '\x1b[C' },
 ];
 
-function MobileInputBar({ onSend }) {
-  const [value, setValue] = useState('');
+function MobileInputBar({ tabId, onSend, disabled }) {
+  const [value, setValue] = useState(() => inputCache.get(tabId) || '');
   const textareaRef = useRef(null);
 
   const submit = () => {
+    if (disabled) return;
     if (!value) {
-      // 빈 상태에서 버튼 누르면 엔터 전송
       onSend('\r');
       return;
     }
-    // 각 줄을 \r로 구분하여 전송
     const lines = value.split('\n');
     onSend(lines.join('\r') + '\r');
     setValue('');
+    inputCache.delete(tabId);
     if (textareaRef.current) textareaRef.current.style.height = '36px';
   };
 
   const handleInput = (e) => {
-    setValue(e.target.value);
-    // 높이 자동 조절 (최대 5줄)
+    const v = e.target.value;
+    setValue(v);
+    inputCache.set(tabId, v);
     const ta = e.target;
     ta.style.height = '36px';
     ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
   };
+
+  const disabledOpacity = disabled ? 0.4 : 1;
 
   return (
     <div style={barStyles.wrapper}>
@@ -106,8 +111,9 @@ function MobileInputBar({ onSend }) {
           <button
             key={k.label}
             className="special-key"
-            onClick={() => onSend(k.data)}
-            style={barStyles.key}
+            onClick={() => !disabled && onSend(k.data)}
+            style={{ ...barStyles.key, opacity: disabledOpacity }}
+            disabled={disabled}
           >
             {k.label}
           </button>
@@ -118,15 +124,20 @@ function MobileInputBar({ onSend }) {
           ref={textareaRef}
           value={value}
           onChange={handleInput}
-          placeholder="command..."
+          placeholder={disabled ? 'disconnected' : 'command...'}
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
           rows={1}
-          style={barStyles.input}
+          style={{ ...barStyles.input, opacity: disabledOpacity }}
+          disabled={disabled}
         />
-        <button onClick={submit} style={barStyles.sendBtn}>
+        <button
+          onClick={submit}
+          style={{ ...barStyles.sendBtn, opacity: disabledOpacity }}
+          disabled={disabled}
+        >
           &#x23CE;
         </button>
       </div>

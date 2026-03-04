@@ -6,7 +6,7 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { xtermTheme } from '../styles/theme';
 import { api } from '../api/client';
 
-export function useTerminal(sessionId, { onTerminated, onStatusChange } = {}) {
+export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileReadOnly } = {}) {
   const termRef = useRef(null);
   const wsRef = useRef(null);
   const fitAddonRef = useRef(null);
@@ -135,11 +135,13 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange } = {}) {
       onStatusChangeRef.current?.('disconnected');
     };
 
-    term.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'input', data }));
-      }
-    });
+    if (!mobileReadOnly) {
+      term.onData((data) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'input', data }));
+        }
+      });
+    }
   }, [sessionId]);
 
   const fit = useCallback(() => {
@@ -222,9 +224,5 @@ function setupMobileTouchScroll(container) {
   });
   ro.observe(scrollArea);
 
-  // 탭 → xterm 포커스 (키보드 열기)
-  // click 이벤트는 스크롤 제스처에서는 발생하지 않고, iOS에서 확실히 키보드를 띄움
-  proxy.addEventListener('click', () => {
-    container.querySelector('textarea')?.focus({ preventScroll: true });
-  });
+  // 모바일에서는 입력바를 통해서만 입력 (xterm 직접 포커스 방지)
 }
