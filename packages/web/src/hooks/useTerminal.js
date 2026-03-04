@@ -61,6 +61,7 @@ export function useTerminal(sessionId) {
     term.unicode.activeVersion = '11';
     term.open(element);
     fitAddon.fit();
+    setupMobileTouchScroll(element);
 
     termRef.current = term;
     fitAddonRef.current = fitAddon;
@@ -140,4 +141,51 @@ export function useTerminal(sessionId) {
   }, [dispose]);
 
   return { attach, fit, dispose, termRef, wsRef };
+}
+
+function setupMobileTouchScroll(container) {
+  const viewport = container.querySelector('.xterm-viewport');
+  const screen = container.querySelector('.xterm-screen');
+  if (!viewport || !screen) return;
+
+  let lastY = 0;
+  let velocity = 0;
+  let lastTime = 0;
+  let momentumId = null;
+
+  screen.addEventListener('touchstart', (e) => {
+    if (momentumId) {
+      cancelAnimationFrame(momentumId);
+      momentumId = null;
+    }
+    lastY = e.touches[0].clientY;
+    lastTime = performance.now();
+    velocity = 0;
+  }, { passive: true });
+
+  screen.addEventListener('touchmove', (e) => {
+    const now = performance.now();
+    const dt = now - lastTime;
+    if (dt > 0) {
+      velocity = (lastY - e.touches[0].clientY) / dt;
+    }
+    lastY = e.touches[0].clientY;
+    lastTime = now;
+  }, { passive: true });
+
+  screen.addEventListener('touchend', () => {
+    const friction = 0.95;
+    const stop = 0.05;
+
+    function step() {
+      velocity *= friction;
+      if (Math.abs(velocity) < stop) return;
+      viewport.scrollTop += velocity * 16;
+      momentumId = requestAnimationFrame(step);
+    }
+
+    if (Math.abs(velocity) > stop) {
+      momentumId = requestAnimationFrame(step);
+    }
+  }, { passive: true });
 }
