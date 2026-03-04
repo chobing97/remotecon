@@ -85,13 +85,11 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
 
     disposedRef.current = false;
 
-    if (!mobileReadOnly) {
-      term.onData((data) => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: 'input', data }));
-        }
-      });
-    }
+    term.onData((data) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'input', data }));
+      }
+    });
 
     connect(term);
 
@@ -310,7 +308,16 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
     return Math.sqrt(dx * dx + dy * dy);
   }
 
+  // 더블탭 → xterm 직접 포커스 (키보드 열림)
+  let lastTapTime = 0;
+  let tapStartX = 0;
+  let tapStartY = 0;
+
   proxy.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      tapStartX = e.touches[0].clientX;
+      tapStartY = e.touches[0].clientY;
+    }
     if (e.touches.length === 2) {
       pinching = true;
       pinchStartDist = getTouchDist(e.touches[0], e.touches[1]);
@@ -333,7 +340,22 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
     }
   }, { passive: false });
 
-  proxy.addEventListener('touchend', () => {
+  proxy.addEventListener('touchend', (e) => {
+    // 더블탭 감지 (스크롤이 아닌 짧은 탭만)
+    if (e.changedTouches.length === 1 && e.touches.length === 0 && !pinching) {
+      const t = e.changedTouches[0];
+      const dx = Math.abs(t.clientX - tapStartX);
+      const dy = Math.abs(t.clientY - tapStartY);
+      if (dx < 10 && dy < 10) {
+        const now = Date.now();
+        if (now - lastTapTime < 300) {
+          term.focus();
+          lastTapTime = 0;
+        } else {
+          lastTapTime = now;
+        }
+      }
+    }
     if (pinching) {
       pinching = false;
       pinchStartDist = 0;
