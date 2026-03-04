@@ -353,14 +353,23 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
           proxy.style.pointerEvents = 'none';
           term.focus();
           lastTapTime = 0;
-          const textarea = term.textarea;
+          const restore = () => {
+            proxy.style.pointerEvents = '';
+            document.removeEventListener('touchstart', onDocTouch, true);
+          };
+          // blur로 복원 (키보드 닫힐 때)
+          const textarea = term.textarea || container.querySelector('.xterm-helper-textarea');
           if (textarea) {
-            const onBlur = () => {
-              proxy.style.pointerEvents = '';
-              textarea.removeEventListener('blur', onBlur);
-            };
-            textarea.addEventListener('blur', onBlur);
+            textarea.addEventListener('blur', restore, { once: true });
           }
+          // fallback: 다음 터치 시 복원
+          const onDocTouch = () => {
+            if (textarea) textarea.removeEventListener('blur', restore);
+            restore();
+          };
+          setTimeout(() => {
+            document.addEventListener('touchstart', onDocTouch, { once: true, capture: true });
+          }, 500);
         } else {
           lastTapTime = now;
         }
