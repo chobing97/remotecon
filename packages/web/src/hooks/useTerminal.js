@@ -160,7 +160,8 @@ function setupMobileTouchScroll(container) {
     top: '0', left: '0', right: '0', bottom: '0',
     overflowY: 'auto',
     zIndex: '10',
-    touchAction: 'pan-y',
+    touchAction: 'manipulation',
+    overscrollBehavior: 'contain',
   });
   spacer.style.cssText = `height:${scrollArea.offsetHeight}px;width:1px;pointer-events:none`;
   proxy.appendChild(spacer);
@@ -190,13 +191,8 @@ function setupMobileTouchScroll(container) {
   ro.observe(scrollArea);
 
   // 탭 → xterm 포커스 (키보드 열기)
-  let touchY = 0;
-  proxy.addEventListener('touchstart', (e) => {
-    touchY = e.touches[0].clientY;
-  }, { passive: true });
-  proxy.addEventListener('touchend', (e) => {
-    if (Math.abs(e.changedTouches[0].clientY - touchY) < 10) {
-      container.querySelector('.xterm-helper-textarea')?.focus();
-    }
-  }, { passive: true });
+  // click 이벤트는 스크롤 제스처에서는 발생하지 않고, iOS에서 확실히 키보드를 띄움
+  proxy.addEventListener('click', () => {
+    container.querySelector('textarea')?.focus({ preventScroll: true });
+  });
 }
