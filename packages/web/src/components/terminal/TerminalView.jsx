@@ -7,12 +7,17 @@ const isMobile = 'ontouchstart' in globalThis;
 export default function TerminalView({ sessionId, tabId, active }) {
   const containerRef = useRef(null);
   const closeTab = useTabStore((s) => s.closeTab);
+  const setTabStatus = useTabStore((s) => s.setTabStatus);
 
   const onTerminated = useCallback(() => {
     closeTab(tabId);
   }, [tabId, closeTab]);
 
-  const { attach, fit, dispose, sendInput } = useTerminal(sessionId, { onTerminated });
+  const onStatusChange = useCallback((status) => {
+    setTabStatus(tabId, status);
+  }, [tabId, setTabStatus]);
+
+  const { attach, fit, dispose, sendInput } = useTerminal(sessionId, { onTerminated, onStatusChange });
   const attachedRef = useRef(false);
 
   useEffect(() => {

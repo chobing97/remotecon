@@ -29,4 +29,9 @@ export const useTabStore = create((set, get) => ({
   },
 
   setActiveTab: (tabId) => set({ activeTabId: tabId }),
+
+  setTabStatus: (tabId, status) => {
+    const { tabs } = get();
+    set({ tabs: tabs.map((t) => (t.id === tabId ? { ...t, status } : t)) });
+  },
 }));

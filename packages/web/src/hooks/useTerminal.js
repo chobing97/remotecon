@@ -6,7 +6,7 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { xtermTheme } from '../styles/theme';
 import { api } from '../api/client';
 
-export function useTerminal(sessionId, { onTerminated } = {}) {
+export function useTerminal(sessionId, { onTerminated, onStatusChange } = {}) {
   const termRef = useRef(null);
   const wsRef = useRef(null);
   const fitAddonRef = useRef(null);
@@ -16,6 +16,8 @@ export function useTerminal(sessionId, { onTerminated } = {}) {
   const terminatedTimerRef = useRef(null);
   const onTerminatedRef = useRef(onTerminated);
   onTerminatedRef.current = onTerminated;
+  const onStatusChangeRef = useRef(onStatusChange);
+  onStatusChangeRef.current = onStatusChange;
 
   // CLI cols 기준으로 컨테이너 폭 설정 + 화면 높이에 맞춰 rows 계산
   function applyCliCols(term, cols) {
@@ -97,6 +99,7 @@ export function useTerminal(sessionId, { onTerminated } = {}) {
 
     ws.onopen = () => {
       term.focus();
+      onStatusChangeRef.current?.('connected');
     };
 
     ws.onmessage = (e) => {
@@ -109,11 +112,13 @@ export function useTerminal(sessionId, { onTerminated } = {}) {
             cliSizeRef.current = { cols: msg.cols, rows: msg.rows };
             applyCliCols(term, msg.cols);
           } else if (msg.type === 'status' && msg.status === 'terminated') {
+            onStatusChangeRef.current?.('terminated');
             term.write('\r\n\x1b[91m[CLI terminated]\x1b[0m\r\n');
             terminatedTimerRef.current = setTimeout(() => {
               onTerminatedRef.current?.();
             }, 10_000);
           } else if (msg.type === 'status' && msg.status === 'connected') {
+            onStatusChangeRef.current?.('connected');
             // CLI 재연결 시 자동 종료 타이머 취소
             if (terminatedTimerRef.current) {
               clearTimeout(terminatedTimerRef.current);
@@ -127,7 +132,7 @@ export function useTerminal(sessionId, { onTerminated } = {}) {
     };
 
     ws.onclose = () => {
-      term.write('\r\n\x1b[90m[disconnected]\x1b[0m\r\n');
+      onStatusChangeRef.current?.('disconnected');
     };
 
     term.onData((data) => {

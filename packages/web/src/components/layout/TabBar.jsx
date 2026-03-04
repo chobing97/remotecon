@@ -16,6 +16,13 @@ export default function TabBar() {
           }}
           onClick={() => setActiveTab(tab.id)}
         >
+          <span style={{
+            ...styles.dot,
+            background: tab.status === 'terminated' ? 'var(--red)'
+              : tab.status === 'disconnected' ? 'var(--orange)'
+              : 'var(--green)',
+            animation: tab.status === 'disconnected' ? 'blink 1s infinite' : 'none',
+          }} />
           <span style={styles.name}>{tab.name}</span>
           <button
             style={styles.close}
@@ -56,6 +63,12 @@ const styles = {
     color: 'var(--fg)',
     background: 'var(--bg)',
     borderBottom: '2px solid var(--blue)',
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: '50%',
+    flexShrink: 0,
   },
   name: { overflow: 'hidden', textOverflow: 'ellipsis' },
   close: {
