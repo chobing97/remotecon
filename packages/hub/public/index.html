@@ -189,8 +189,8 @@
       border-radius: 50%;
       flex-shrink: 0;
     }
-    .session-dot.online { background: var(--green); }
-    .session-dot.offline { background: var(--fg-dim); }
+    .session-dot.connected { background: var(--green); }
+    .session-dot.reconnecting { background: var(--yellow); }
 
     .session-info { flex: 1; min-width: 0; }
     .session-name {
@@ -266,8 +266,8 @@
       border-radius: 999px;
       flex-shrink: 0;
     }
-    .status-badge.online { background: rgba(158,206,106,0.15); color: var(--green); }
-    .status-badge.offline { background: rgba(107,112,137,0.15); color: var(--fg-dim); }
+    .status-badge.connected { background: rgba(158,206,106,0.15); color: var(--green); }
+    .status-badge.reconnecting { background: rgba(224,175,104,0.15); color: var(--yellow); }
 
     #terminal-container {
       flex: 1;
@@ -524,10 +524,10 @@
 
       list.innerHTML = sessions.map(s => `
         <div class="session-card" data-id="${s.id}" data-name="${escHtml(s.name)}">
-          <div class="session-dot ${s.online ? 'online' : 'offline'}"></div>
+          <div class="session-dot ${s.status}"></div>
           <div class="session-info">
             <div class="session-name">${escHtml(s.name)}</div>
-            <div class="session-meta">${s.online ? '연결됨' : '오프라인'} · ${formatTime(s.createdAt)}</div>
+            <div class="session-meta">${s.status === 'connected' ? '연결됨' : '재연결 중'} · ${formatTime(s.createdAt)}</div>
           </div>
           <span style="color:var(--fg-dim);font-size:18px">›</span>
         </div>`).join('');
@@ -591,7 +591,7 @@
         if (!res.ok) throw new Error('token error');
         wsToken = (await res.json()).token;
       } catch {
-        setStatus(false);
+        setStatus('reconnecting');
         wsReconnectTimer = setTimeout(() => connectWs(sessionId), 3000);
         return;
       }
@@ -608,7 +608,7 @@
         } else {
           try {
             const msg = JSON.parse(e.data);
-            if (msg.type === 'status') setStatus(msg.online);
+            if (msg.type === 'status') setStatus(msg.status);
           } catch {}
         }
       };
@@ -619,18 +619,19 @@
         }
       };
 
-      ws.onerror = () => setStatus(false);
+      ws.onerror = () => setStatus('reconnecting');
     }
 
     function wsSend(data) {
       if (ws?.readyState === WebSocket.OPEN) ws.send(data);
     }
 
-    function setStatus(online) {
+    function setStatus(status) {
       const badge = document.getElementById('status-badge');
       if (!badge) return;
-      badge.textContent = online ? '연결됨' : '오프라인';
-      badge.className = `status-badge ${online ? 'online' : 'offline'}`;
+      const labels = { connected: '연결됨', reconnecting: '재연결 중', terminated: '세션 종료' };
+      badge.textContent = labels[status] || status;
+      badge.className = `status-badge ${status}`;
     }
 
     // ── 입력 전송 ────────────────────────────────────────
