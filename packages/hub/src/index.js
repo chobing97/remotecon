@@ -25,6 +25,7 @@ const server = http.createServer(app);
 setupPassport();
 
 // ── 미들웨어 ──────────────────────────────────────────────
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(session({
   store: new SqliteSessionStore(),
