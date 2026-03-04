@@ -86,10 +86,11 @@ export default function TerminalView({ sessionId, tabId, active }) {
             fontSize: 11,
             padding: '3px 8px',
             borderRadius: 4,
-            background: 'var(--red)',
-            color: '#fff',
-            fontWeight: 600,
-            opacity: 0.8,
+            background: 'none',
+            color: 'var(--red)',
+            fontWeight: 500,
+            opacity: 0.4,
+            border: '1px solid var(--red)',
           }}
         >
           Close
