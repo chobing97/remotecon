@@ -56,7 +56,7 @@ async function start(sessionName, options = {}) {
   const hub = connectToHub({
     hubUrl: config.HUB_URL,
     sessionId,
-    idToken,
+    getToken: () => getIdToken(config.DEVICE_CLIENT_ID, config.DEVICE_CLIENT_SECRET),
     pty: ptyProcess,
     onConnected: () => {
       process.stderr.write('\x1b[2m[remotecon] 연결됨\x1b[0m\r\n');

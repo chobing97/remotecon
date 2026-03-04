@@ -10,21 +10,36 @@ const RECONNECT_DELAY = 3000;
  * @param {object} opts
  * @param {string} opts.hubUrl         - Hub 서버 URL (예: https://hub.example.com)
  * @param {string} opts.sessionId      - 세션 ID
- * @param {string} opts.idToken        - Google ID Token
+ * @param {function} opts.getToken     - ID Token을 반환하는 async 함수
  * @param {object} opts.pty            - node-pty 인스턴스
  * @param {function} opts.onConnected  - 연결 성공 콜백
  * @param {function} opts.onDisconnect - 연결 끊김 콜백
  */
-function connectToHub({ hubUrl, sessionId, idToken, pty, onConnected, onDisconnect }) {
+function connectToHub({ hubUrl, sessionId, getToken, pty, onConnected, onDisconnect }) {
   const wsUrl = hubUrl.replace(/^http/, 'ws') + `/ws/terminal?sessionId=${sessionId}`;
   let ws;
   let closed = false;
   let failCount = 0;
   const MAX_FAILURES = 10;
 
-  function connect() {
+  async function connect() {
+    let token;
+    try {
+      token = await getToken();
+    } catch (err) {
+      process.stderr.write(`\x1b[2m[remotecon] 토큰 갱신 실패: ${err.message}\x1b[0m\r\n`);
+      failCount++;
+      if (failCount >= MAX_FAILURES) {
+        closed = true;
+        pty.kill();
+        return;
+      }
+      setTimeout(connect, RECONNECT_DELAY);
+      return;
+    }
+
     ws = new WebSocket(wsUrl, {
-      headers: { Authorization: `Bearer ${idToken}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     ws.on('open', () => {
