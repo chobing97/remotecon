@@ -149,4 +149,10 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-module.exports = { getIdToken, logout };
+// 저장된 토큰이 있으면 반환 (로그인 플로우 없음)
+function getIdTokenIfValid() {
+  const config = loadConfig();
+  return config.id_token || null;
+}
+
+module.exports = { getIdToken, getIdTokenIfValid, logout };

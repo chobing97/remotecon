@@ -60,17 +60,33 @@ function getSessionsByUser(userId) {
   ).all(userId);
 
   return rows.map(row => {
-    const mem = live.get(row.id);
+    let mem = live.get(row.id);
+
+    // DB에만 있고 live에 없으면 복원 + 정리 타이머 설정
+    if (!mem) {
+      mem = reviveRuntime(row.id, row.name, row.user_id, !!row.recording);
+      scheduleCleanup(mem);
+    }
+
     return {
       id: row.id,
       name: row.name,
       userId: row.user_id,
       recording: !!row.recording,
       createdAt: row.created_at,
-      terminalWs: mem?.terminalWs ?? null,
-      browserWss: mem?.browserWss ?? new Set(),
+      terminalWs: mem.terminalWs,
+      browserWss: mem.browserWss,
     };
   });
+}
+
+// 터미널 연결 없는 세션 정리 예약
+function scheduleCleanup(session) {
+  if (session.terminalWs || session._deleteTimer) return;
+  session._deleteTimer = setTimeout(() => {
+    deleteSession(session.id);
+    session.browserWss.forEach(bws => bws.close());
+  }, 60_000);
 }
 
 function appendScrollback(session, data) {

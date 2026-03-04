@@ -46,6 +46,17 @@ router.post('/api/sessions', requireApiAuth, (req, res) => {
   res.json({ sessionId, wsUrl: `/ws/terminal?sessionId=${sessionId}` });
 });
 
+// CLI logout → 모든 세션 종료
+router.delete('/api/sessions', requireApiAuth, (req, res) => {
+  const sessions = getSessionsByUser(req.apiUser.id);
+  for (const s of sessions) {
+    if (s.terminalWs) s.terminalWs.close(4001, 'Logout');
+    s.browserWss?.forEach(ws => ws.close(4001, 'Logout'));
+    deleteSession(s.id);
+  }
+  res.json({ ok: true, closed: sessions.length });
+});
+
 router.delete('/api/sessions/:id', requireAuth, (req, res) => {
   const session = getSession(req.params.id);
   if (!session) return res.status(404).json({ error: 'Not found' });
