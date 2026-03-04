@@ -53,6 +53,14 @@ function connectToHub({ hubUrl, sessionId, getToken, pty, onConnected, onDisconn
       onConnected?.();
     });
 
+    ws.on('ping', () => {
+      log('ping received');
+    });
+
+    ws.on('pong', () => {
+      log('pong received');
+    });
+
     ws.on('message', (data, isBinary) => {
       if (isBinary) return;
       const text = data.toString('utf8');
