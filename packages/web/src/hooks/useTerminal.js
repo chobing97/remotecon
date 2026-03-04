@@ -161,7 +161,7 @@ function setupMobileTouchScroll(container) {
     overflowY: 'auto',
     zIndex: '10',
     touchAction: 'manipulation',
-    overscrollBehavior: 'contain',
+    overscrollBehaviorY: 'contain',
   });
   spacer.style.cssText = `height:${scrollArea.offsetHeight}px;width:1px;pointer-events:none`;
   proxy.appendChild(spacer);
