@@ -55,9 +55,11 @@ export default function TerminalView({ sessionId, tabId, active }) {
 
 const specialKeys = [
   { label: 'Tab', data: '\t' },
+  { label: 'S-Tab', data: '\x1b[Z' },
   { label: 'Esc', data: '\x1b' },
   { label: 'C-c', data: '\x03' },
   { label: 'C-d', data: '\x04' },
+  { label: 'C-e', data: '\x05' },
   { label: 'C-z', data: '\x1a' },
   { label: 'C-l', data: '\x0c' },
   { label: '\u2191', data: '\x1b[A' },
