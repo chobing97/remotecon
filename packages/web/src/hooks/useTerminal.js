@@ -245,24 +245,36 @@ function setupMobileTouchScroll(container) {
   container.style.position = 'relative';
   container.appendChild(proxy);
 
-  // 스크롤 동기화: proxy → viewport
+  // 오토스크롤: 사용자가 맨 밑에 있으면 활성, 위로 스크롤하면 비활성
   let isUserScrolling = false;
+  let autoScroll = true;
+
+  function isAtBottom(el) {
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 10;
+  }
+
+  // 스크롤 동기화: proxy → viewport
   proxy.addEventListener('scroll', () => {
     isUserScrolling = true;
     viewport.scrollTop = proxy.scrollTop;
+    autoScroll = isAtBottom(proxy);
     requestAnimationFrame(() => { isUserScrolling = false; });
   }, { passive: true });
 
-  // 스크롤 동기화: viewport → proxy (새 출력으로 자동 스크롤 시)
+  // 스크롤 동기화: viewport → proxy (오토스크롤 활성 시에만)
   viewport.addEventListener('scroll', () => {
     if (isUserScrolling) return;
-    proxy.scrollTop = viewport.scrollTop;
+    if (autoScroll) {
+      proxy.scrollTop = viewport.scrollTop;
+    }
   }, { passive: true });
 
   // scroll-area 높이 변경 감시 (새 출력 도착 시)
   const ro = new ResizeObserver(() => {
     spacer.style.height = scrollArea.offsetHeight + 'px';
-    if (!isUserScrolling) proxy.scrollTop = viewport.scrollTop;
+    if (autoScroll) {
+      proxy.scrollTop = viewport.scrollTop;
+    }
   });
   ro.observe(scrollArea);
 
