@@ -82,7 +82,6 @@ function SelectOverlay({ termRef, onClose }) {
   const preRef = useRef(null);
   const [text, setText] = useState('');
   const [metrics, setMetrics] = useState(null);
-  const scrollTargetRef = useRef(0);
 
   useEffect(() => {
     const term = termRef.current;
@@ -117,13 +116,12 @@ function SelectOverlay({ termRef, onClose }) {
       if (line) lines.push(line.translateToString(true));
     }
     setText(lines.join('\n').trimEnd());
-    scrollTargetRef.current = buf.viewportY * cellHeight;
   }, [termRef]);
 
-  // 텍스트 렌더링 후 스크롤 위치 동기화
+  // 텍스트 렌더링 후 맨 밑으로 스크롤
   useEffect(() => {
     if (text && preRef.current) {
-      preRef.current.scrollTop = scrollTargetRef.current;
+      preRef.current.scrollTop = preRef.current.scrollHeight;
     }
   }, [text]);
 
@@ -189,7 +187,7 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, disabled })
       return;
     }
     const lines = value.split('\n');
-    onSend(lines.join('\r') + '\r');
+    onSend(lines.join('\r'));
     setValue('');
     inputCache.delete(tabId);
     if (textareaRef.current) textareaRef.current.style.height = '36px';
