@@ -2,11 +2,10 @@ import { useAuth } from '../../hooks/useAuth';
 import { NavLink } from 'react-router-dom';
 
 const navItems = [
-  { to: '/mobile', label: 'for Mobile' },
   { to: '/', label: 'Sessions' },
   { to: '/terminal', label: 'Terminal' },
-  { to: '/recordings', label: 'Recordings' },
-  { to: '/webhooks', label: 'Webhooks' },
+  { to: '/recordings', label: 'Rec' },
+  { to: '/webhooks', label: 'Hooks' },
 ];
 
 export default function Header() {
@@ -34,7 +33,6 @@ export default function Header() {
       </div>
       {user && (
         <div style={styles.right}>
-          <span style={styles.name}>{user.name}</span>
           <button onClick={logout} style={styles.logoutBtn}>Logout</button>
         </div>
       )}
@@ -47,32 +45,31 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '0 16px',
-    height: 48,
+    padding: '0 12px',
+    height: 40,
     background: 'var(--bg-dark)',
     borderBottom: '1px solid var(--border)',
     flexShrink: 0,
   },
-  left: { display: 'flex', alignItems: 'center', gap: 16 },
+  left: { display: 'flex', alignItems: 'center', gap: 10 },
   logo: {
     fontWeight: 700,
-    fontSize: 16,
+    fontSize: 14,
     color: 'var(--blue)',
     letterSpacing: 1,
   },
-  nav: { display: 'flex', gap: 12 },
+  nav: { display: 'flex', gap: 10 },
   link: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 500,
     transition: 'color 0.15s',
   },
-  right: { display: 'flex', alignItems: 'center', gap: 12 },
-  name: { fontSize: 12, color: 'var(--fg-dim)' },
+  right: { display: 'flex', alignItems: 'center' },
   logoutBtn: {
-    fontSize: 12,
+    fontSize: 11,
     color: 'var(--fg-dim)',
     background: 'none',
-    padding: '4px 8px',
+    padding: '3px 6px',
     borderRadius: 4,
     border: '1px solid var(--border)',
   },
