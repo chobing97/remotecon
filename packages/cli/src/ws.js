@@ -60,6 +60,7 @@ function connectToHub({ hubUrl, sessionId, idToken, pty, onConnected, onDisconne
         // 서버에서 세션이 삭제됨 — 재연결 중단
         closed = true;
         process.stderr.write('\x1b[2m[remotecon] 세션이 서버에서 삭제되었습니다.\x1b[0m\r\n');
+        pty.kill();
         return;
       }
       onDisconnect?.();
@@ -68,6 +69,7 @@ function connectToHub({ hubUrl, sessionId, idToken, pty, onConnected, onDisconne
         if (failCount >= MAX_FAILURES) {
           process.stderr.write(`\x1b[2m[remotecon] 재연결 ${MAX_FAILURES}회 실패 — 중단합니다.\x1b[0m\r\n`);
           closed = true;
+          pty.kill();
           return;
         }
         setTimeout(connect, RECONNECT_DELAY);
