@@ -54,15 +54,15 @@ export default function TerminalView({ sessionId, tabId, active }) {
 }
 
 const specialKeys = [
+  { label: 'Esc', data: '\x1b' },
   { label: 'Tab', data: '\t' },
   { label: 'S-Tab', data: '\x1b[Z' },
-  { label: 'Esc', data: '\x1b' },
+  { label: 'Enter', data: '\r' },
   { label: 'C-c', data: '\x03' },
   { label: 'C-d', data: '\x04' },
   { label: 'C-e', data: '\x05' },
   { label: 'C-z', data: '\x1a' },
   { label: 'C-l', data: '\x0c' },
-  { label: 'Enter', data: '\r' },
   { label: '\u2191', data: '\x1b[A' },
   { label: '\u2193', data: '\x1b[B' },
   { label: '\u2190', data: '\x1b[D' },
@@ -71,11 +71,30 @@ const specialKeys = [
 
 function MobileInputBar({ onSend }) {
   const [value, setValue] = useState('');
+  const textareaRef = useRef(null);
 
   const submit = () => {
     if (!value) return;
-    onSend(value + '\r');
+    // 각 줄을 \r로 구분하여 전송
+    const lines = value.split('\n');
+    onSend(lines.join('\r') + '\r');
     setValue('');
+    if (textareaRef.current) textareaRef.current.style.height = '36px';
+  };
+
+  const handleInput = (e) => {
+    setValue(e.target.value);
+    // 높이 자동 조절 (최대 5줄)
+    const ta = e.target;
+    ta.style.height = '36px';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submit();
+    }
   };
 
   return (
@@ -92,16 +111,17 @@ function MobileInputBar({ onSend }) {
         ))}
       </div>
       <div style={barStyles.bar}>
-        <input
-          type="text"
+        <textarea
+          ref={textareaRef}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
+          onChange={handleInput}
+          onKeyDown={handleKeyDown}
           placeholder="command..."
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
+          rows={1}
           style={barStyles.input}
         />
         <button onClick={submit} style={barStyles.sendBtn}>
@@ -148,6 +168,11 @@ const barStyles = {
     background: 'var(--bg-surface)',
     color: 'var(--fg)',
     minWidth: 0,
+    resize: 'none',
+    height: 36,
+    maxHeight: 120,
+    lineHeight: '22px',
+    overflowY: 'auto',
   },
   sendBtn: {
     fontSize: 18,
@@ -157,5 +182,6 @@ const barStyles = {
     color: '#fff',
     fontWeight: 600,
     flexShrink: 0,
+    alignSelf: 'flex-end',
   },
 };
