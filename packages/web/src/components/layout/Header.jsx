@@ -33,7 +33,7 @@ export default function Header() {
       </div>
       {user && (
         <div style={styles.right}>
-          <button onClick={logout} style={styles.logoutBtn}>Logout</button>
+          <button onClick={() => { if (window.confirm('로그아웃 하시겠습니까?')) logout(); }} style={styles.logoutBtn}>Logout</button>
         </div>
       )}
     </header>
