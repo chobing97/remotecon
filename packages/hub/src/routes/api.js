@@ -19,7 +19,8 @@ router.get('/api/me', requireAuth, (req, res) => {
 
 // ── 세션 ────────────────────────────────────
 router.get('/api/sessions', requireAuth, (req, res) => {
-  const sessions = getSessionsByUser(req.user.id).map(s => ({
+  const userId = req.user.id;
+  const sessions = getSessionsByUser(userId).map(s => ({
     id: s.id,
     name: s.name,
     createdAt: s.createdAt,

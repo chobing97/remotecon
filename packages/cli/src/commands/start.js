@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs');
 const https = require('https');
 const http = require('http');
 const path = require('path');
@@ -7,6 +8,20 @@ const { getIdToken } = require('../auth');
 const { connectToHub } = require('../ws');
 const { spawnPty } = require('../pty');
 const config = require('../config');
+
+const STATUS_DIR = path.join(process.env.HOME || '~', '.remotecon');
+const STATUS_FILE = path.join(STATUS_DIR, 'status.json');
+
+function writeStatus(data) {
+  try {
+    fs.mkdirSync(STATUS_DIR, { recursive: true });
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(data, null, 2));
+  } catch {}
+}
+
+function clearStatus() {
+  try { fs.unlinkSync(STATUS_FILE); } catch {}
+}
 
 function registerSession(hubUrl, name, idToken, record) {
   return new Promise((resolve, reject) => {
@@ -53,21 +68,23 @@ async function start(sessionName, options = {}) {
   process.stderr.write(`\x1b[2m[remotecon] 세션: ${name}${record ? ' (녹화 중)' : ''}\x1b[0m\n`);
   process.stderr.write(`\x1b[2m[remotecon] 모바일: ${config.HUB_URL}\x1b[0m\n`);
 
+  const statusBase = { session: name, sessionId, server: config.HUB_URL, pid: process.pid };
+
+  writeStatus({ ...statusBase, status: 'connecting' });
+
   const hub = connectToHub({
     hubUrl: config.HUB_URL,
     sessionId,
     getToken: () => getIdToken(config.DEVICE_CLIENT_ID, config.DEVICE_CLIENT_SECRET),
     pty: ptyProcess,
     onConnected: () => {
+      writeStatus({ ...statusBase, status: 'connected' });
       hub.sendResize(process.stdout.columns || 120, process.stdout.rows || 35);
     },
-    onDisconnect: () => {},
+    onDisconnect: () => {
+      writeStatus({ ...statusBase, status: 'reconnecting' });
+    },
   });
-
-  // status 조회용으로 전역에 노출
-  start._hub = hub;
-  start._sessionName = name;
-  start._sessionId = sessionId;
 
   ptyProcess.onData((data) => {
     process.stdout.write(data);
@@ -93,6 +110,7 @@ async function start(sessionName, options = {}) {
 
   ptyProcess.onExit(({ exitCode }) => {
     hub.close();
+    clearStatus();
     if (process.stdin.isTTY) process.stdin.setRawMode(false);
     process.stderr.write(`\r\n\x1b[2m[remotecon] 세션 종료 (exit ${exitCode})\x1b[0m\r\n`);
     process.exit(exitCode);
