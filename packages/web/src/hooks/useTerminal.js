@@ -16,6 +16,7 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
   const terminatedTimerRef = useRef(null);
   const reconnectTimerRef = useRef(null);
   const disposedRef = useRef(false);
+  const statusRef = useRef(null);
   const onTerminatedRef = useRef(onTerminated);
   onTerminatedRef.current = onTerminated;
   const onStatusChangeRef = useRef(onStatusChange);
@@ -105,16 +106,32 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
     };
   }, [sessionId]);
 
+  function setStatus(status) {
+    statusRef.current = status;
+    onStatusChangeRef.current?.(status);
+  }
+
   const connect = useCallback(async (term) => {
-    const { token } = await api.getWsToken();
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${proto}://${location.host}/ws/session/${sessionId}?token=${token}`);
+    let ws;
+    try {
+      const { token } = await api.getWsToken();
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}/ws/session/${sessionId}?token=${token}`);
+    } catch {
+      // 토큰 발급 실패 시 재시도
+      if (!disposedRef.current && statusRef.current !== 'terminated') {
+        reconnectTimerRef.current = setTimeout(() => {
+          if (!disposedRef.current && termRef.current) connect(termRef.current);
+        }, 3000);
+      }
+      return;
+    }
     ws.binaryType = 'arraybuffer';
     wsRef.current = ws;
 
     ws.onopen = () => {
       if (!mobileReadOnly) term.focus();
-      onStatusChangeRef.current?.('connected');
+      // 상태는 Hub가 보내는 status 메시지로 결정 (여기서 설정하지 않음)
     };
 
     ws.onmessage = (e) => {
@@ -127,19 +144,19 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
             cliSizeRef.current = { cols: msg.cols, rows: msg.rows };
             applyCliCols(term, msg.cols);
           } else if (msg.type === 'status' && msg.status === 'terminated') {
-            onStatusChangeRef.current?.('terminated');
+            setStatus('terminated');
             term.write('\r\n\x1b[91m[CLI terminated]\x1b[0m\r\n');
             terminatedTimerRef.current = setTimeout(() => {
               onTerminatedRef.current?.();
             }, 10_000);
           } else if (msg.type === 'status' && msg.status === 'connected') {
-            onStatusChangeRef.current?.('connected');
+            setStatus('connected');
             if (terminatedTimerRef.current) {
               clearTimeout(terminatedTimerRef.current);
               terminatedTimerRef.current = null;
             }
           } else if (msg.type === 'status' && msg.status === 'reconnecting') {
-            onStatusChangeRef.current?.('disconnected');
+            setStatus('disconnected');
           }
         } catch {
           // ignore
@@ -148,11 +165,14 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
     };
 
     ws.onclose = () => {
-      onStatusChangeRef.current?.('disconnected');
-      // 자동 재접속 (disposed 또는 terminated가 아닌 경우)
-      if (!disposedRef.current) {
+      // terminated 상태를 덮어쓰지 않음
+      if (statusRef.current !== 'terminated') {
+        setStatus('disconnected');
+      }
+      // terminated가 아닌 경우에만 재접속 시도
+      if (!disposedRef.current && statusRef.current !== 'terminated') {
         reconnectTimerRef.current = setTimeout(() => {
-          if (!disposedRef.current && termRef.current) {
+          if (!disposedRef.current && termRef.current && statusRef.current !== 'terminated') {
             connect(termRef.current);
           }
         }, 3000);
