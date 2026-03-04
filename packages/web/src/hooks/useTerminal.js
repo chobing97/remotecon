@@ -346,7 +346,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
       const t = e.changedTouches[0];
       const dx = Math.abs(t.clientX - tapStartX);
       const dy = Math.abs(t.clientY - tapStartY);
-      if (dx < 10 && dy < 10) {
+      if (dx < 30 && dy < 30) {
         const now = Date.now();
         if (now - lastTapTime < 300) {
           term.focus();
