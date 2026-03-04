@@ -11,6 +11,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
   const setTabStatus = useTabStore((s) => s.setTabStatus);
   const tabStatus = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.status);
   const [selectMode, setSelectMode] = useState(false);
+  const [autoScroll, setAutoScroll] = useState(true);
 
   const onTerminated = useCallback(() => {
     closeTab(tabId);
@@ -20,7 +21,11 @@ export default function TerminalView({ sessionId, tabId, active }) {
     setTabStatus(tabId, status);
   }, [tabId, setTabStatus]);
 
-  const { attach, fit, dispose, sendInput, termRef } = useTerminal(sessionId, { onTerminated, onStatusChange, mobileReadOnly: isMobile });
+  const onAutoScrollChange = useCallback((v) => {
+    setAutoScroll(v);
+  }, []);
+
+  const { attach, fit, dispose, sendInput, termRef, scrollToBottom } = useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, mobileReadOnly: isMobile });
   const attachedRef = useRef(false);
 
   useEffect(() => {
@@ -56,6 +61,29 @@ export default function TerminalView({ sessionId, tabId, active }) {
           style={{ minWidth: '100%', height: '100%' }}
         />
         {selectMode && <SelectOverlay termRef={termRef} onClose={() => setSelectMode(false)} />}
+        {isMobile && !autoScroll && !selectMode && (
+          <button
+            onClick={scrollToBottom}
+            style={{
+              position: 'absolute',
+              bottom: 10,
+              right: 10,
+              zIndex: 15,
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: 'rgba(122, 162, 247, 0.5)',
+              color: '#fff',
+              fontSize: 18,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            }}
+          >
+            &#x2193;
+          </button>
+        )}
       </div>
       {isMobile && <MobileInputBar tabId={tabId} onSend={sendInput} selectMode={selectMode} onToggleSelect={() => setSelectMode((v) => !v)} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
     </div>

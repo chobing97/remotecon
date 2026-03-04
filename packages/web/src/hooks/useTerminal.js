@@ -6,7 +6,7 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { xtermTheme } from '../styles/theme';
 import { api } from '../api/client';
 
-export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileReadOnly } = {}) {
+export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, mobileReadOnly } = {}) {
   const termRef = useRef(null);
   const wsRef = useRef(null);
   const fitAddonRef = useRef(null);
@@ -17,6 +17,9 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
   const reconnectTimerRef = useRef(null);
   const disposedRef = useRef(false);
   const statusRef = useRef(null);
+  const scrollToBottomRef = useRef(null);
+  const onAutoScrollChangeRef = useRef(onAutoScrollChange);
+  onAutoScrollChangeRef.current = onAutoScrollChange;
   const onTerminatedRef = useRef(onTerminated);
   onTerminatedRef.current = onTerminated;
   const onStatusChangeRef = useRef(onStatusChange);
@@ -69,7 +72,7 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
     term.unicode.activeVersion = '11';
     term.open(element);
     fitAddon.fit();
-    setupMobileTouchScroll(element);
+    scrollToBottomRef.current = setupMobileTouchScroll(element, (v) => onAutoScrollChangeRef.current?.(v));
 
     termRef.current = term;
     fitAddonRef.current = fitAddon;
@@ -216,11 +219,15 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
     return () => dispose();
   }, [dispose]);
 
-  return { attach, fit, dispose, sendInput, termRef, wsRef };
+  const scrollToBottom = useCallback(() => {
+    scrollToBottomRef.current?.();
+  }, []);
+
+  return { attach, fit, dispose, sendInput, termRef, wsRef, scrollToBottom };
 }
 
-function setupMobileTouchScroll(container) {
-  if (!('ontouchstart' in window)) return;
+function setupMobileTouchScroll(container, onAutoScrollChange) {
+  if (!('ontouchstart' in window)) return null;
 
   const viewport = container.querySelector('.xterm-viewport');
   const scrollArea = container.querySelector('.xterm-scroll-area');
@@ -253,11 +260,18 @@ function setupMobileTouchScroll(container) {
     return el.scrollHeight - el.scrollTop - el.clientHeight < 10;
   }
 
+  function setAutoScroll(v) {
+    if (autoScroll !== v) {
+      autoScroll = v;
+      onAutoScrollChange?.(v);
+    }
+  }
+
   // 스크롤 동기화: proxy → viewport
   proxy.addEventListener('scroll', () => {
     isUserScrolling = true;
     viewport.scrollTop = proxy.scrollTop;
-    autoScroll = isAtBottom(proxy);
+    setAutoScroll(isAtBottom(proxy));
     requestAnimationFrame(() => { isUserScrolling = false; });
   }, { passive: true });
 
@@ -278,5 +292,10 @@ function setupMobileTouchScroll(container) {
   });
   ro.observe(scrollArea);
 
-  // 모바일에서는 입력바를 통해서만 입력 (xterm 직접 포커스 방지)
+  // scrollToBottom 함수 반환
+  return () => {
+    proxy.scrollTop = proxy.scrollHeight;
+    viewport.scrollTop = viewport.scrollHeight;
+    setAutoScroll(true);
+  };
 }
