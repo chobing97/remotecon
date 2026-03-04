@@ -44,7 +44,7 @@ function connectToHub({ hubUrl, sessionId, sessionName, getToken, pty, onConnect
   function slog(msg) { log(`[${tag}] ${msg}`); }
 
   async function connect() {
-    if (closed) return;
+    if (closed) { slog('connect skipped (closed)'); return; }
 
     slog(`connect attempt (delay=${delay}ms)`);
 
@@ -124,7 +124,7 @@ function connectToHub({ hubUrl, sessionId, sessionName, getToken, pty, onConnect
   }
 
   function scheduleReconnect() {
-    if (closed) return;
+    if (closed) { slog('reconnect skipped (closed)'); return; }
     slog(`reconnect scheduled in ${delay}ms`);
     setTimeout(connect, delay);
     delay = Math.min(delay * 1.5, MAX_RECONNECT_DELAY);
@@ -144,6 +144,7 @@ function connectToHub({ hubUrl, sessionId, sessionName, getToken, pty, onConnect
       }
     },
     close() {
+      slog('closing intentionally');
       closed = true;
       ws?.close(4000, 'intentional');
     },
