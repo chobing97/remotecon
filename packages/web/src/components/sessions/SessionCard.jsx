@@ -52,7 +52,7 @@ const styles = {
   info: { flex: 1, minWidth: 0 },
   row: { display: 'flex', alignItems: 'center', gap: 8 },
   dot: { width: 8, height: 8, borderRadius: '50%', flexShrink: 0 },
-  name: { fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  name: { fontSize: 14, fontWeight: 600, wordBreak: 'break-all', lineHeight: 1.4 },
   meta: { fontSize: 12, color: 'var(--fg-dim)', marginTop: 4 },
   actions: { display: 'flex', gap: 8, marginLeft: 12 },
   connectBtn: {
