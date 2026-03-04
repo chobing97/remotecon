@@ -11,7 +11,19 @@ const LOG_DIR = path.join(process.env.HOME || '~', '.remotecon');
 const LOG_FILE = path.join(LOG_DIR, 'connection.log');
 
 function log(msg) {
-  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  const now = new Date();
+  const off = -now.getTimezoneOffset();
+  const sign = off >= 0 ? '+' : '-';
+  const absOff = Math.abs(off);
+  const tz = sign + String(Math.floor(absOff / 60)).padStart(2, '0') + ':' + String(absOff % 60).padStart(2, '0');
+  const ts = now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + 'T' +
+    String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0') + ':' +
+    String(now.getSeconds()).padStart(2, '0') + '.' +
+    String(now.getMilliseconds()).padStart(3, '0') + tz;
+  const line = `[${ts}] ${msg}\n`;
   try {
     fs.mkdirSync(LOG_DIR, { recursive: true });
     fs.appendFileSync(LOG_FILE, line);
