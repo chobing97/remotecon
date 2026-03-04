@@ -10,6 +10,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
   const closeTab = useTabStore((s) => s.closeTab);
   const setTabStatus = useTabStore((s) => s.setTabStatus);
   const tabStatus = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.status);
+  const [selectMode, setSelectMode] = useState(false);
 
   const onTerminated = useCallback(() => {
     closeTab(tabId);
@@ -19,7 +20,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
     setTabStatus(tabId, status);
   }, [tabId, setTabStatus]);
 
-  const { attach, fit, dispose, sendInput } = useTerminal(sessionId, { onTerminated, onStatusChange, mobileReadOnly: isMobile });
+  const { attach, fit, dispose, sendInput, termRef } = useTerminal(sessionId, { onTerminated, onStatusChange, mobileReadOnly: isMobile });
   const attachedRef = useRef(false);
 
   useEffect(() => {
@@ -49,13 +50,14 @@ export default function TerminalView({ sessionId, tabId, active }) {
         flexDirection: 'column',
       }}
     >
-      <div style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', minHeight: 0 }}>
+      <div style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', minHeight: 0, position: 'relative' }}>
         <div
           ref={containerRef}
           style={{ minWidth: '100%', height: '100%' }}
         />
+        {selectMode && <SelectOverlay termRef={termRef} onClose={() => setSelectMode(false)} />}
       </div>
-      {isMobile && <MobileInputBar tabId={tabId} onSend={sendInput} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
+      {isMobile && <MobileInputBar tabId={tabId} onSend={sendInput} selectMode={selectMode} onToggleSelect={() => setSelectMode((v) => !v)} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
     </div>
   );
 }
@@ -64,6 +66,7 @@ const specialKeys = [
   { label: 'Esc', data: '\x1b' },
   { label: 'Tab', data: '\t' },
   { label: 'S-Tab', data: '\x1b[Z' },
+  { label: 'BSpace', data: '\x7f' },
   { label: 'C-c', data: '\x03' },
   { label: 'C-d', data: '\x04' },
   { label: 'C-e', data: '\x05' },
@@ -75,7 +78,81 @@ const specialKeys = [
   { label: '\u2192', data: '\x1b[C' },
 ];
 
-function MobileInputBar({ tabId, onSend, disabled }) {
+function SelectOverlay({ termRef, onClose }) {
+  const [text, setText] = useState('');
+
+  useEffect(() => {
+    const term = termRef.current;
+    if (!term) return;
+    const buf = term.buffer.active;
+    const lines = [];
+    // 스크롤백 포함 전체 버퍼
+    for (let i = 0; i < buf.length; i++) {
+      const line = buf.getLine(i);
+      if (line) lines.push(line.translateToString(true));
+    }
+    setText(lines.join('\n').trimEnd());
+  }, [termRef]);
+
+  return (
+    <div style={selectStyles.overlay}>
+      <div style={selectStyles.header}>
+        <span style={selectStyles.hint}>길게 눌러서 텍스트 선택</span>
+        <button onClick={onClose} style={selectStyles.closeBtn}>Done</button>
+      </div>
+      <pre style={selectStyles.text}>{text}</pre>
+    </div>
+  );
+}
+
+const selectStyles = {
+  overlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    zIndex: 20,
+    background: 'var(--bg)',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '6px 10px',
+    background: 'var(--bg-dark)',
+    borderBottom: '1px solid var(--border)',
+    flexShrink: 0,
+  },
+  hint: {
+    fontSize: 12,
+    color: 'var(--fg-dim)',
+  },
+  closeBtn: {
+    fontSize: 12,
+    padding: '4px 12px',
+    borderRadius: 4,
+    background: 'var(--blue)',
+    color: '#fff',
+    fontWeight: 600,
+  },
+  text: {
+    flex: 1,
+    overflow: 'auto',
+    padding: '8px 10px',
+    margin: 0,
+    fontSize: 13,
+    lineHeight: 1.4,
+    fontFamily: "'Meslo LG M for Powerline', 'Fira Code', monospace",
+    color: 'var(--fg)',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-all',
+    userSelect: 'text',
+    WebkitUserSelect: 'text',
+  },
+};
+
+function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, disabled }) {
   const [value, setValue] = useState(() => inputCache.get(tabId) || '');
   const textareaRef = useRef(null);
 
@@ -117,6 +194,13 @@ function MobileInputBar({ tabId, onSend, disabled }) {
             {k.label}
           </button>
         ))}
+        <button
+          className="special-key"
+          onClick={onToggleSelect}
+          style={{ ...barStyles.key, ...(selectMode ? { background: 'var(--blue)', color: '#fff' } : {}) }}
+        >
+          Select
+        </button>
       </div>
       <div style={barStyles.bar}>
         <textarea
