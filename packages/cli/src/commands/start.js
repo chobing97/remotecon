@@ -12,15 +12,34 @@ const config = require('../config');
 const STATUS_DIR = path.join(process.env.HOME || '~', '.remotecon');
 const STATUS_FILE = path.join(STATUS_DIR, 'status.json');
 
+function readStatuses() {
+  try {
+    const content = fs.readFileSync(STATUS_FILE, 'utf8');
+    const parsed = JSON.parse(content);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    return [];
+  }
+}
+
 function writeStatus(data) {
   try {
     fs.mkdirSync(STATUS_DIR, { recursive: true });
-    fs.writeFileSync(STATUS_FILE, JSON.stringify(data, null, 2));
+    const list = readStatuses().filter(s => s.pid !== data.pid);
+    list.push(data);
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(list, null, 2));
   } catch {}
 }
 
 function clearStatus() {
-  try { fs.unlinkSync(STATUS_FILE); } catch {}
+  try {
+    const list = readStatuses().filter(s => s.pid !== process.pid);
+    if (list.length === 0) {
+      fs.unlinkSync(STATUS_FILE);
+    } else {
+      fs.writeFileSync(STATUS_FILE, JSON.stringify(list, null, 2));
+    }
+  } catch {}
 }
 
 function registerSession(hubUrl, name, idToken, record) {
