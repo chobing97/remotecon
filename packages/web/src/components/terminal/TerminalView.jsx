@@ -247,6 +247,7 @@ function SelectOverlay({ termRef, onClose }) {
 
 function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, disabled }) {
   const [value, setValue] = useState(() => inputCache.get(tabId) || '');
+  const [hidden, setHidden] = useState(false);
   const textareaRef = useRef(null);
 
   const submit = () => {
@@ -273,6 +274,20 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, disabled })
 
   const disabledOpacity = disabled ? 0.4 : 1;
 
+  if (hidden) {
+    return (
+      <div style={{ flexShrink: 0, background: 'var(--bg-dark)', borderTop: '1px solid var(--border)', padding: '4px 8px', display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          className="special-key"
+          onClick={() => setHidden(false)}
+          style={{ ...barStyles.key, fontSize: 14 }}
+        >
+          &#x2328;
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={barStyles.wrapper}>
       <div style={barStyles.keys}>
@@ -293,6 +308,13 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, disabled })
           style={{ ...barStyles.key, ...(selectMode ? { background: 'var(--blue)', color: '#fff' } : {}) }}
         >
           Select
+        </button>
+        <button
+          className="special-key"
+          onClick={() => setHidden(true)}
+          style={barStyles.key}
+        >
+          &#x25BC;
         </button>
       </div>
       <div style={barStyles.bar}>
