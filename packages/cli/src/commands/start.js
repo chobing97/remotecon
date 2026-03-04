@@ -71,9 +71,10 @@ async function start(sessionName, options = {}) {
       const cols = process.stdout.columns || 120;
       const rows = process.stdout.rows || 35;
       hub.sendResize(cols, rows);
-      // PTY에 SIGWINCH를 보내 쉘/앱이 화면을 다시 그리도록 함
-      // (서버 재시작 후 headless 터미널이 빈 상태이므로)
-      ptyProcess.resize(cols, rows);
+      // 크기를 살짝 바꿨다 복원하여 SIGWINCH 강제 발생
+      // (같은 크기로 resize하면 일부 앱이 redraw를 생략함)
+      ptyProcess.resize(cols, Math.max(1, rows - 1));
+      setTimeout(() => ptyProcess.resize(cols, rows), 50);
     },
     onDisconnect: () => {
       updateStatus(process.pid, 'reconnecting');
