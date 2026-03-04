@@ -82,14 +82,17 @@ function SelectOverlay({ termRef, onClose }) {
   const preRef = useRef(null);
   const [text, setText] = useState('');
   const [metrics, setMetrics] = useState(null);
+  const scrollTargetRef = useRef(0);
 
   useEffect(() => {
     const term = termRef.current;
     if (!term) return;
 
+    let cellHeight = 17;
     // xterm 셀 크기, 폰트 정보 추출
     try {
       const dims = term._core._renderService.dimensions.css.cell;
+      cellHeight = dims.height;
       const opts = term.options;
       setMetrics({
         fontSize: opts.fontSize,
@@ -114,15 +117,15 @@ function SelectOverlay({ termRef, onClose }) {
       if (line) lines.push(line.translateToString(true));
     }
     setText(lines.join('\n').trimEnd());
-
-    // 스크롤 위치 동기화 (viewportY 기준)
-    requestAnimationFrame(() => {
-      if (preRef.current && dims) {
-        const dims2 = term._core._renderService.dimensions.css.cell;
-        preRef.current.scrollTop = buf.viewportY * dims2.height;
-      }
-    });
+    scrollTargetRef.current = buf.viewportY * cellHeight;
   }, [termRef]);
+
+  // 텍스트 렌더링 후 스크롤 위치 동기화
+  useEffect(() => {
+    if (text && preRef.current) {
+      preRef.current.scrollTop = scrollTargetRef.current;
+    }
+  }, [text]);
 
   // xterm 내부 패딩 (기본 xterm padding)
   const padding = 4;
