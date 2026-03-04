@@ -110,6 +110,12 @@ input, textarea {
   outline: none;
 }
 
+/* Mobile special key button press feedback */
+.special-key:active {
+  background: var(--bg-highlight) !important;
+  color: var(--fg) !important;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

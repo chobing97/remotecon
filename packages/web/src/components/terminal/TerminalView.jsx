@@ -103,6 +103,7 @@ function MobileInputBar({ onSend }) {
         {specialKeys.map((k) => (
           <button
             key={k.label}
+            className="special-key"
             onClick={() => onSend(k.data)}
             style={barStyles.key}
           >
@@ -153,6 +154,8 @@ const barStyles = {
     border: '1px solid var(--border)',
     whiteSpace: 'nowrap',
     flexShrink: 0,
+    transition: 'background 0.1s, color 0.1s',
+    WebkitTapHighlightColor: 'transparent',
   },
   bar: {
     display: 'flex',
