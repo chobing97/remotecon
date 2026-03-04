@@ -13,6 +13,25 @@ export default function TerminalView({ sessionId, tabId, active }) {
   const [selectMode, setSelectMode] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
 
+  // Select 모드 진입/해제 시 히스토리 관리 (뒤로가기 대응)
+  const toggleSelectMode = useCallback(() => {
+    setSelectMode((v) => {
+      if (!v) {
+        history.pushState({ selectMode: true }, '');
+      } else {
+        history.back();
+      }
+      return !v;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!selectMode) return;
+    const onPopState = () => setSelectMode(false);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [selectMode]);
+
   const onTerminated = useCallback(() => {
     closeTab(tabId);
   }, [tabId, closeTab]);
@@ -60,7 +79,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
           ref={containerRef}
           style={{ minWidth: '100%', height: '100%' }}
         />
-        {selectMode && <SelectOverlay termRef={termRef} onClose={() => setSelectMode(false)} />}
+        {selectMode && <SelectOverlay termRef={termRef} onClose={toggleSelectMode} />}
         {isMobile && !autoScroll && !selectMode && (
           <button
             onClick={scrollToBottom}
@@ -85,7 +104,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
           </button>
         )}
       </div>
-      {isMobile && <MobileInputBar tabId={tabId} onSend={sendInput} selectMode={selectMode} onToggleSelect={() => setSelectMode((v) => !v)} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
+      {isMobile && <MobileInputBar tabId={tabId} onSend={sendInput} selectMode={selectMode} onToggleSelect={toggleSelectMode} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
     </div>
   );
 }
