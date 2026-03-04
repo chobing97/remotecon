@@ -7,7 +7,7 @@ import TerminalView from '../components/terminal/TerminalView';
 const isMobile = 'ontouchstart' in globalThis;
 
 export default function TerminalPage() {
-  const { tabs, activeTabId } = useTabStore();
+  const { tabs, activeTabId, closeTab } = useTabStore();
   const navigate = useNavigate();
   const activeTab = tabs.find((t) => t.id === activeTabId);
 
@@ -32,6 +32,12 @@ export default function TerminalPage() {
               animation: activeTab.status === 'disconnected' ? 'blink 1s infinite' : 'none',
             }} />
             <span style={styles.titleText}>{activeTab.name}</span>
+            <button
+              onClick={() => closeTab(activeTab.id)}
+              style={styles.closeBtn}
+            >
+              &times;
+            </button>
           </div>
         )
       ) : (
@@ -72,8 +78,17 @@ const styles = {
     flexShrink: 0,
   },
   titleText: {
+    flex: 1,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+  },
+  closeBtn: {
+    fontSize: 16,
+    color: 'var(--fg-dim)',
+    background: 'none',
+    padding: '0 4px',
+    marginLeft: 'auto',
+    lineHeight: 1,
   },
 };

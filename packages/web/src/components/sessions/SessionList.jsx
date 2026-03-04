@@ -1,6 +1,6 @@
 import SessionCard from './SessionCard';
 
-export default function SessionList({ sessions, onConnect, onDelete }) {
+export default function SessionList({ sessions, onConnect }) {
   if (sessions.length === 0) {
     return (
       <div style={styles.empty}>
@@ -15,7 +15,7 @@ export default function SessionList({ sessions, onConnect, onDelete }) {
   return (
     <div style={styles.list}>
       {sessions.map((s) => (
-        <SessionCard key={s.id} session={s} onConnect={onConnect} onDelete={onDelete} />
+        <SessionCard key={s.id} session={s} onConnect={onConnect} />
       ))}
     </div>
   );

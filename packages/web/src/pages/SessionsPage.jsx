@@ -4,7 +4,7 @@ import { useTabStore } from '../store/tabs';
 import SessionList from '../components/sessions/SessionList';
 
 export default function SessionsPage() {
-  const { sessions, loading, deleteSession } = useSessions();
+  const { sessions, loading } = useSessions();
   const openTab = useTabStore((s) => s.openTab);
   const navigate = useNavigate();
 
@@ -23,7 +23,7 @@ export default function SessionsPage() {
         <h2 style={styles.title}>Sessions</h2>
         <span style={styles.count}>{sessions.length} active</span>
       </div>
-      <SessionList sessions={sessions} onConnect={handleConnect} onDelete={deleteSession} />
+      <SessionList sessions={sessions} onConnect={handleConnect} />
     </div>
   );
 }

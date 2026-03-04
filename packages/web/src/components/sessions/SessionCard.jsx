@@ -1,29 +1,21 @@
-export default function SessionCard({ session, onConnect, onDelete }) {
+export default function SessionCard({ session, onConnect }) {
   const age = timeSince(new Date(session.createdAt));
+  const isDisconnected = session.status !== 'connected';
 
   return (
-    <div style={styles.card}>
-      <div style={styles.info}>
-        <div style={styles.row}>
-          <span
-            style={{
-              ...styles.dot,
-              background: session.status === 'connected' ? 'var(--green)' : 'var(--yellow)',
-            }}
-          />
-          <span style={styles.name}>{session.name}</span>
-        </div>
-        <div style={styles.meta}>
-          {age} &middot; {session.viewers} viewer{session.viewers !== 1 ? 's' : ''}
-        </div>
+    <div style={styles.card} onClick={() => onConnect(session)}>
+      <div style={styles.row}>
+        <span
+          style={{
+            ...styles.dot,
+            background: isDisconnected ? 'var(--orange)' : 'var(--green)',
+            animation: isDisconnected ? 'blink 1s infinite' : 'none',
+          }}
+        />
+        <span style={styles.name}>{session.name}</span>
       </div>
-      <div style={styles.actions}>
-        <button style={styles.connectBtn} onClick={() => onConnect(session)}>
-          Connect
-        </button>
-        <button style={styles.deleteBtn} onClick={() => onDelete(session.id)}>
-          &times;
-        </button>
+      <div style={styles.meta}>
+        {age} &middot; {session.viewers} viewer{session.viewers !== 1 ? 's' : ''}
       </div>
     </div>
   );
@@ -42,33 +34,16 @@ function timeSince(date) {
 const styles = {
   card: {
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    gap: 4,
     padding: '12px 16px',
     background: 'var(--bg-surface)',
     borderRadius: 'var(--radius)',
     border: '1px solid var(--border)',
+    cursor: 'pointer',
   },
-  info: { flex: 1, minWidth: 0 },
   row: { display: 'flex', alignItems: 'center', gap: 8 },
   dot: { width: 8, height: 8, borderRadius: '50%', flexShrink: 0 },
   name: { fontSize: 14, fontWeight: 600, wordBreak: 'break-all', lineHeight: 1.4 },
-  meta: { fontSize: 12, color: 'var(--fg-dim)', marginTop: 4 },
-  actions: { display: 'flex', gap: 8, marginLeft: 12 },
-  connectBtn: {
-    fontSize: 12,
-    padding: '6px 14px',
-    borderRadius: 6,
-    background: 'var(--blue)',
-    color: '#fff',
-    fontWeight: 600,
-  },
-  deleteBtn: {
-    fontSize: 16,
-    padding: '4px 8px',
-    borderRadius: 6,
-    background: 'none',
-    color: 'var(--fg-dim)',
-    border: '1px solid var(--border)',
-  },
+  meta: { fontSize: 12, color: 'var(--fg-dim)', marginLeft: 16 },
 };
