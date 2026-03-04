@@ -77,7 +77,7 @@ async function start(sessionName, options = {}) {
     process.stdin.setRawMode(true);
     process.stdin.resume();
     process.stdin.on('data', (data) => {
-      ptyProcess.write(data.toString('binary'));
+      ptyProcess.write(data.toString());
     });
   } else {
     process.stderr.write('\x1b[2m[remotecon] 터미널 입력 비활성 (stdin이 TTY가 아님) — 모바일로만 제어 가능\x1b[0m\r\n');
