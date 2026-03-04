@@ -2,18 +2,18 @@
 
 const { WebSocket } = require('ws');
 const { MSG, encode, decode } = require('./protocol');
+const { serializeScreen } = require('../services/sessions');
 
 function handleBrowserConnection(ws, session) {
   session.browserWss.add(ws);
 
-  // 웹 터미널 상태 초기화 후 이전 출력 재생
+  // headless 터미널에서 직렬화된 화면 스냅샷 전송
   if (ws.readyState === WebSocket.OPEN) {
     // RIS (Reset to Initial State) — 웹 xterm 상태 클리어
     ws.send(Buffer.from('\x1bc'));
+    const screen = serializeScreen(session);
+    if (screen) ws.send(Buffer.from(screen));
   }
-  session.scrollback.forEach(data => {
-    if (ws.readyState === WebSocket.OPEN) ws.send(data);
-  });
 
   // 현재 상태 전송
   if (ws.readyState === WebSocket.OPEN) {

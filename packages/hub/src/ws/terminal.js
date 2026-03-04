@@ -2,7 +2,7 @@
 
 const { WebSocket } = require('ws');
 const { MSG, encode } = require('./protocol');
-const { deleteSession, appendScrollback } = require('../services/sessions');
+const { deleteSession, appendScrollback, writeToHeadless, resizeHeadless } = require('../services/sessions');
 const { captureFrame, isRecording, stopRecording } = require('../services/recordings');
 const { processOutput } = require('../services/webhooks');
 
@@ -25,6 +25,7 @@ function handleTerminalConnection(ws, session) {
   ws.on('message', (data, isBinary) => {
     if (isBinary) {
       appendScrollback(session, data);
+      writeToHeadless(session, data);
       session.browserWss.forEach(bws => {
         if (bws.readyState === WebSocket.OPEN) bws.send(data);
       });
@@ -44,6 +45,7 @@ function handleTerminalConnection(ws, session) {
         if (msg.type === 'resize') {
           session.cols = msg.cols;
           session.rows = msg.rows;
+          resizeHeadless(session, msg.cols, msg.rows);
           broadcastText(session, encode(MSG.RESIZE, { cols: msg.cols, rows: msg.rows }));
         }
       } catch {

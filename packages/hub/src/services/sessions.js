@@ -1,5 +1,8 @@
 'use strict';
 
+const { Terminal } = require('@xterm/headless');
+const { SerializeAddon } = require('@xterm/addon-serialize');
+const { Unicode11Addon } = require('@xterm/addon-unicode11');
 const { getDb } = require('../db');
 
 // 인메모리: WebSocket 객체, scrollback 버퍼
@@ -19,6 +22,13 @@ function createSession({ id, name, userId, recording = false }) {
 
 // 인메모리 런타임 객체 생성 (신규 또는 DB에서 복원)
 function reviveRuntime(id, name, userId, recording) {
+  const headlessTerm = new Terminal({ allowProposedApi: true, scrollback: 1000 });
+  const serializeAddon = new SerializeAddon();
+  const unicode11Addon = new Unicode11Addon();
+  headlessTerm.loadAddon(serializeAddon);
+  headlessTerm.loadAddon(unicode11Addon);
+  headlessTerm.unicode.activeVersion = '11';
+
   const runtime = {
     id,
     name,
@@ -27,6 +37,8 @@ function reviveRuntime(id, name, userId, recording) {
     terminalWs: null,
     browserWss: new Set(),
     scrollback: [],
+    headlessTerm,
+    serializeAddon,
     _deleteTimer: null,
   };
   live.set(id, runtime);
@@ -47,6 +59,8 @@ function getSession(id) {
 }
 
 function deleteSession(id) {
+  const session = live.get(id);
+  if (session?.headlessTerm) session.headlessTerm.dispose();
   live.delete(id);
   getDb().prepare(
     "UPDATE sessions SET closed_at = datetime('now') WHERE id = ? AND closed_at IS NULL"
@@ -96,10 +110,27 @@ function appendScrollback(session, data) {
   }
 }
 
+function writeToHeadless(session, data) {
+  session.headlessTerm.write(
+    typeof data === 'string' ? data : new Uint8Array(data)
+  );
+}
+
+function resizeHeadless(session, cols, rows) {
+  session.headlessTerm.resize(cols, rows);
+}
+
+function serializeScreen(session) {
+  return session.serializeAddon.serialize();
+}
+
 module.exports = {
   createSession,
   getSession,
   deleteSession,
   getSessionsByUser,
   appendScrollback,
+  writeToHeadless,
+  resizeHeadless,
+  serializeScreen,
 };
