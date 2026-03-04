@@ -49,7 +49,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
         flexDirection: 'column',
       }}
     >
-      <div style={{ flex: 1, overflowX: 'auto', minHeight: 0 }}>
+      <div style={{ flex: 1, overflowX: 'auto', minHeight: 0, overflow: 'hidden' }}>
         <div
           ref={containerRef}
           style={{ minWidth: '100%', height: '100%' }}

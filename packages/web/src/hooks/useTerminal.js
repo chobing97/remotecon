@@ -93,8 +93,11 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
       }
     };
 
-    // ResizeObserver로 컨테이너 크기 변화 감지 (모바일 URL 바 등)
+    // ResizeObserver로 컨테이너 크기 변화 감지 (모바일 URL 바, 키보드 등)
     const ro = new ResizeObserver(onResize);
+    // 부모 wrapper(flex:1 영역)를 감시해야 정확한 가용 높이 반영
+    const wrapper = element.parentElement;
+    if (wrapper) ro.observe(wrapper);
     ro.observe(element);
 
     return () => {
@@ -110,7 +113,7 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, mobileRea
     wsRef.current = ws;
 
     ws.onopen = () => {
-      term.focus();
+      if (!mobileReadOnly) term.focus();
       onStatusChangeRef.current?.('connected');
     };
 
