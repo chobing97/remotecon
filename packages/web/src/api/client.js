@@ -3,7 +3,7 @@ async function request(path, options = {}) {
     headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
   });
-  if (res.status === 401) {
+  if (res.status === 401 && !options.noRedirect) {
     window.location.href = '/login';
     throw new Error('Unauthorized');
   }
@@ -15,7 +15,7 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  getMe: () => request('/api/me'),
+  getMe: () => request('/api/me', { noRedirect: true }),
   logout: () => request('/auth/logout', { method: 'POST' }),
 
   // Sessions
