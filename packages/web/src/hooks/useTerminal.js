@@ -346,11 +346,21 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
       const t = e.changedTouches[0];
       const dx = Math.abs(t.clientX - tapStartX);
       const dy = Math.abs(t.clientY - tapStartY);
-      if (dx < 30 && dy < 30) {
+      if (dx < 300 && dy < 300) {
         const now = Date.now();
         if (now - lastTapTime < 300) {
+          // 프록시를 비활성화해야 xterm textarea가 포커스를 유지함
+          proxy.style.pointerEvents = 'none';
           term.focus();
           lastTapTime = 0;
+          const textarea = term.textarea;
+          if (textarea) {
+            const onBlur = () => {
+              proxy.style.pointerEvents = '';
+              textarea.removeEventListener('blur', onBlur);
+            };
+            textarea.addEventListener('blur', onBlur);
+          }
         } else {
           lastTapTime = now;
         }
