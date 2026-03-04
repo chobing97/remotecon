@@ -101,14 +101,6 @@ export function useTerminal(sessionId) {
           if (msg.type === 'resize' && msg.cols && msg.rows) {
             cliSizeRef.current = { cols: msg.cols, rows: msg.rows };
             applyCliCols(term, msg.cols);
-          } else if (msg.type === 'status') {
-            if (msg.status === 'reconnecting') {
-              term.write('\r\n\x1b[33m[CLI disconnected]\x1b[0m\r\n');
-            } else if (msg.status === 'connected') {
-              term.write('\r\n\x1b[32m[CLI reconnected]\x1b[0m\r\n');
-            } else if (msg.status === 'terminated') {
-              term.write('\r\n\x1b[31m[Session terminated]\x1b[0m\r\n');
-            }
           }
         } catch {
           // ignore
