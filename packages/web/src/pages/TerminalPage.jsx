@@ -36,7 +36,7 @@ export default function TerminalPage() {
               onClick={() => closeTab(activeTab.id)}
               style={styles.closeBtn}
             >
-              &times;
+              Close
             </button>
           </div>
         )
@@ -84,11 +84,12 @@ const styles = {
     whiteSpace: 'nowrap',
   },
   closeBtn: {
-    fontSize: 16,
-    color: 'var(--fg-dim)',
-    background: 'none',
-    padding: '0 4px',
+    fontSize: 11,
+    color: '#fff',
+    background: 'var(--red)',
+    padding: '3px 8px',
     marginLeft: 'auto',
-    lineHeight: 1,
+    borderRadius: 4,
+    fontWeight: 600,
   },
 };

@@ -72,38 +72,59 @@ export default function TerminalView({ sessionId, tabId, active }) {
         height: '100%',
         display: active ? 'flex' : 'none',
         flexDirection: 'column',
+        position: 'relative',
       }}
     >
+      {!isMobile && (
+        <button
+          onClick={() => closeTab(tabId)}
+          style={{
+            position: 'absolute',
+            top: 6,
+            left: 6,
+            zIndex: 15,
+            fontSize: 11,
+            padding: '3px 8px',
+            borderRadius: 4,
+            background: 'var(--red)',
+            color: '#fff',
+            fontWeight: 600,
+            opacity: 0.8,
+          }}
+        >
+          Close
+        </button>
+      )}
       <div style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', minHeight: 0, position: 'relative' }}>
         <div
           ref={containerRef}
           style={{ minWidth: '100%', height: '100%' }}
         />
         {selectMode && <SelectOverlay termRef={termRef} onClose={toggleSelectMode} />}
-        {isMobile && !autoScroll && !selectMode && (
-          <button
-            onClick={scrollToBottom}
-            style={{
-              position: 'absolute',
-              bottom: 10,
-              right: 10,
-              zIndex: 15,
-              width: 36,
-              height: 36,
-              borderRadius: '50%',
-              background: 'rgba(122, 162, 247, 0.5)',
-              color: '#fff',
-              fontSize: 18,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-            }}
-          >
-            &#x2193;
-          </button>
-        )}
       </div>
+      {isMobile && !autoScroll && !selectMode && (
+        <button
+          onClick={scrollToBottom}
+          style={{
+            position: 'absolute',
+            bottom: isMobile ? 100 : 10,
+            right: 10,
+            zIndex: 15,
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
+            background: 'rgba(122, 162, 247, 0.5)',
+            color: '#fff',
+            fontSize: 18,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}
+        >
+          &#x2193;
+        </button>
+      )}
       {isMobile && <MobileInputBar tabId={tabId} onSend={sendInput} selectMode={selectMode} onToggleSelect={toggleSelectMode} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
     </div>
   );
