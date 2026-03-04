@@ -59,14 +59,15 @@ async function start(sessionName, options = {}) {
     getToken: () => getIdToken(config.DEVICE_CLIENT_ID, config.DEVICE_CLIENT_SECRET),
     pty: ptyProcess,
     onConnected: () => {
-      process.stderr.write('\x1b[2m[remotecon] 연결됨\x1b[0m\r\n');
-      // WS 연결 후 초기 크기 전송
       hub.sendResize(process.stdout.columns || 120, process.stdout.rows || 35);
     },
-    onDisconnect: () => {
-      process.stderr.write('\x1b[2m[remotecon] 재연결 중...\x1b[0m\r\n');
-    },
+    onDisconnect: () => {},
   });
+
+  // status 조회용으로 전역에 노출
+  start._hub = hub;
+  start._sessionName = name;
+  start._sessionId = sessionId;
 
   ptyProcess.onData((data) => {
     process.stdout.write(data);
@@ -83,7 +84,6 @@ async function start(sessionName, options = {}) {
     process.stderr.write('\x1b[2m[remotecon] 터미널 입력 비활성 (stdin이 TTY가 아님) — 모바일로만 제어 가능\x1b[0m\r\n');
   }
 
-  // 데스크탑 터미널 크기 변경 → PTY + Hub에 전파
   process.on('SIGWINCH', () => {
     const cols = process.stdout.columns;
     const rows = process.stdout.rows;

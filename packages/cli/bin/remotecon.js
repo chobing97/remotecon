@@ -24,6 +24,7 @@ Commands:
   remotecon [name]          Start a remote terminal session (default: cwd name)
   remotecon login           Authenticate with Google (Device Flow)
   remotecon logout          Clear saved credentials
+  remotecon status          Show connection status
   remotecon ls              List active sessions
   remotecon webhooks        List webhooks
   remotecon webhooks add    Add a webhook
@@ -47,6 +48,8 @@ function run() {
       return require('../src/commands/login')();
     case 'logout':
       return require('../src/commands/logout')();
+    case 'status':
+      return require('../src/commands/status')();
     case 'ls':
       return require('../src/commands/sessions')();
     case 'webhooks':

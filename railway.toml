@@ -1,6 +1,7 @@
 [build]
 builder = "nixpacks"
 buildCommand = "npm run build -w packages/web"
+watchPatterns = ["packages/hub/**", "packages/web/**", "package.json", "railway.toml", "nixpacks.toml"]
 
 [deploy]
 startCommand = "node packages/hub/src/index.js"
