@@ -85,13 +85,13 @@ const styles = {
   },
   closeBtn: {
     fontSize: 11,
-    color: 'var(--green)',
+    color: 'var(--red)',
     background: 'none',
     padding: '3px 8px',
     marginLeft: 'auto',
     borderRadius: 4,
     fontWeight: 500,
-    border: '1px solid var(--green)',
-    opacity: 0.6,
+    border: '1px solid var(--red)',
+    opacity: 0.4,
   },
 };
