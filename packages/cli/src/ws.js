@@ -101,6 +101,7 @@ function connectToHub({ hubUrl, sessionId, getToken, pty, onConnected, onDisconn
 
   function scheduleReconnect() {
     if (closed) return;
+    log(`reconnect scheduled in ${delay}ms`);
     setTimeout(connect, delay);
     delay = Math.min(delay * 1.5, MAX_RECONNECT_DELAY);
   }
