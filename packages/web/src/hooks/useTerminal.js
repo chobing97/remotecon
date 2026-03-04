@@ -78,10 +78,13 @@ export function useTerminal(sessionId, { onTerminated } = {}) {
         fitAddon.fit();
       }
     };
-    window.addEventListener('resize', onResize);
+
+    // ResizeObserver로 컨테이너 크기 변화 감지 (모바일 URL 바 등)
+    const ro = new ResizeObserver(onResize);
+    ro.observe(element);
 
     return () => {
-      window.removeEventListener('resize', onResize);
+      ro.disconnect();
     };
   }, [sessionId]);
 
