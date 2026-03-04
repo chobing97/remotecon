@@ -53,9 +53,21 @@ export default function TerminalView({ sessionId, tabId, active }) {
   );
 }
 
+const specialKeys = [
+  { label: 'Tab', data: '\t' },
+  { label: 'Esc', data: '\x1b' },
+  { label: 'C-c', data: '\x03' },
+  { label: 'C-d', data: '\x04' },
+  { label: 'C-z', data: '\x1a' },
+  { label: 'C-l', data: '\x0c' },
+  { label: '\u2191', data: '\x1b[A' },
+  { label: '\u2193', data: '\x1b[B' },
+  { label: '\u2190', data: '\x1b[D' },
+  { label: '\u2192', data: '\x1b[C' },
+];
+
 function MobileInputBar({ onSend }) {
   const [value, setValue] = useState('');
-  const inputRef = useRef(null);
 
   const submit = () => {
     if (!value) return;
@@ -64,35 +76,65 @@ function MobileInputBar({ onSend }) {
   };
 
   return (
-    <div style={barStyles.bar}>
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
-        placeholder="command..."
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck={false}
-        style={barStyles.input}
-      />
-      <button onClick={submit} style={barStyles.btn}>
-        &#x23CE;
-      </button>
+    <div style={barStyles.wrapper}>
+      <div style={barStyles.keys}>
+        {specialKeys.map((k) => (
+          <button
+            key={k.label}
+            onClick={() => onSend(k.data)}
+            style={barStyles.key}
+          >
+            {k.label}
+          </button>
+        ))}
+      </div>
+      <div style={barStyles.bar}>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
+          placeholder="command..."
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          style={barStyles.input}
+        />
+        <button onClick={submit} style={barStyles.sendBtn}>
+          &#x23CE;
+        </button>
+      </div>
     </div>
   );
 }
 
 const barStyles = {
+  wrapper: {
+    flexShrink: 0,
+    background: 'var(--bg-dark)',
+    borderTop: '1px solid var(--border)',
+  },
+  keys: {
+    display: 'flex',
+    gap: 4,
+    padding: '6px 8px 0',
+    overflowX: 'auto',
+  },
+  key: {
+    fontSize: 12,
+    padding: '4px 10px',
+    borderRadius: 4,
+    background: 'var(--bg-surface)',
+    color: 'var(--fg-dim)',
+    border: '1px solid var(--border)',
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
+  },
   bar: {
     display: 'flex',
     gap: 6,
     padding: '6px 8px',
-    background: 'var(--bg-dark)',
-    borderTop: '1px solid var(--border)',
-    flexShrink: 0,
   },
   input: {
     flex: 1,
@@ -104,7 +146,7 @@ const barStyles = {
     color: 'var(--fg)',
     minWidth: 0,
   },
-  btn: {
+  sendBtn: {
     fontSize: 18,
     padding: '4px 12px',
     borderRadius: 6,
