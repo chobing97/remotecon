@@ -68,7 +68,12 @@ async function start(sessionName, options = {}) {
     pty: ptyProcess,
     onConnected: () => {
       updateStatus(process.pid, 'connected');
-      hub.sendResize(process.stdout.columns || 120, process.stdout.rows || 35);
+      const cols = process.stdout.columns || 120;
+      const rows = process.stdout.rows || 35;
+      hub.sendResize(cols, rows);
+      // PTY에 SIGWINCH를 보내 쉘/앱이 화면을 다시 그리도록 함
+      // (서버 재시작 후 headless 터미널이 빈 상태이므로)
+      ptyProcess.resize(cols, rows);
     },
     onDisconnect: () => {
       updateStatus(process.pid, 'reconnecting');
