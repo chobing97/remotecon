@@ -12,6 +12,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
   const tabStatus = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.status);
   const [selectMode, setSelectMode] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [inputBarHidden, setInputBarHidden] = useState(false);
 
   // Select 모드 진입/해제 시 히스토리 관리 (뒤로가기 대응)
   const toggleSelectMode = useCallback(() => {
@@ -108,7 +109,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
           onClick={scrollToBottom}
           style={{
             position: 'absolute',
-            bottom: isMobile ? 100 : 10,
+            bottom: inputBarHidden ? 10 : 100,
             right: 10,
             zIndex: 15,
             width: 36,
@@ -126,7 +127,31 @@ export default function TerminalView({ sessionId, tabId, active }) {
           &#x2193;
         </button>
       )}
-      {isMobile && <MobileInputBar tabId={tabId} onSend={sendInput} selectMode={selectMode} onToggleSelect={toggleSelectMode} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
+      {isMobile && inputBarHidden && !selectMode && (
+        <button
+          className="special-key"
+          onClick={() => setInputBarHidden(false)}
+          style={{
+            position: 'absolute',
+            bottom: 10,
+            left: 10,
+            zIndex: 15,
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
+            background: 'rgba(122, 162, 247, 0.5)',
+            color: '#fff',
+            fontSize: 18,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}
+        >
+          &#x2328;
+        </button>
+      )}
+      {isMobile && !inputBarHidden && <MobileInputBar tabId={tabId} onSend={sendInput} selectMode={selectMode} onToggleSelect={toggleSelectMode} onHide={() => setInputBarHidden(true)} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
     </div>
   );
 }
@@ -245,9 +270,8 @@ function SelectOverlay({ termRef, onClose }) {
   );
 }
 
-function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, disabled }) {
+function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, disabled }) {
   const [value, setValue] = useState(() => inputCache.get(tabId) || '');
-  const [hidden, setHidden] = useState(false);
   const textareaRef = useRef(null);
 
   const submit = () => {
@@ -274,20 +298,6 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, disabled })
 
   const disabledOpacity = disabled ? 0.4 : 1;
 
-  if (hidden) {
-    return (
-      <div style={{ flexShrink: 0, background: 'var(--bg-dark)', borderTop: '1px solid var(--border)', padding: '4px 8px', display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          className="special-key"
-          onClick={() => setHidden(false)}
-          style={{ ...barStyles.key, fontSize: 14 }}
-        >
-          &#x2328;
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div style={barStyles.wrapper}>
       <div style={barStyles.keys}>
@@ -311,7 +321,7 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, disabled })
         </button>
         <button
           className="special-key"
-          onClick={() => setHidden(true)}
+          onClick={onHide}
           style={barStyles.key}
         >
           &#x25BC;

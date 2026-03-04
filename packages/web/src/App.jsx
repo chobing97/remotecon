@@ -2,6 +2,8 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import Header from './components/layout/Header';
 
+const isMobile = 'ontouchstart' in globalThis;
+
 export default function App() {
   const { user, loading } = useAuth();
 
@@ -17,7 +19,7 @@ export default function App() {
 
   return (
     <div style={styles.layout}>
-      <Header />
+      {!isMobile && <Header />}
       <main style={styles.main}>
         <Outlet />
       </main>
