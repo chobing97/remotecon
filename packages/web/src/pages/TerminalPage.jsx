@@ -4,9 +4,12 @@ import { useTabStore } from '../store/tabs';
 import TabBar from '../components/layout/TabBar';
 import TerminalView from '../components/terminal/TerminalView';
 
+const isMobile = 'ontouchstart' in globalThis;
+
 export default function TerminalPage() {
   const { tabs, activeTabId } = useTabStore();
   const navigate = useNavigate();
+  const activeTab = tabs.find((t) => t.id === activeTabId);
 
   useEffect(() => {
     if (tabs.length === 0) {
@@ -18,7 +21,22 @@ export default function TerminalPage() {
 
   return (
     <div style={styles.page}>
-      <TabBar />
+      {isMobile ? (
+        activeTab && (
+          <div style={styles.mobileTitle}>
+            <span style={{
+              ...styles.dot,
+              background: activeTab.status === 'terminated' ? 'var(--red)'
+                : activeTab.status === 'disconnected' ? 'var(--orange)'
+                : 'var(--green)',
+              animation: activeTab.status === 'disconnected' ? 'blink 1s infinite' : 'none',
+            }} />
+            <span style={styles.titleText}>{activeTab.name}</span>
+          </div>
+        )
+      ) : (
+        <TabBar />
+      )}
       <div style={styles.terminals}>
         {tabs.map((tab) => (
           <TerminalView
@@ -36,4 +54,26 @@ export default function TerminalPage() {
 const styles = {
   page: { display: 'flex', flexDirection: 'column', height: '100%' },
   terminals: { flex: 1, position: 'relative', overflow: 'hidden' },
+  mobileTitle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '6px 12px',
+    fontSize: 12,
+    color: 'var(--fg)',
+    background: 'var(--bg-dark)',
+    borderBottom: '1px solid var(--border)',
+    flexShrink: 0,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: '50%',
+    flexShrink: 0,
+  },
+  titleText: {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
 };
