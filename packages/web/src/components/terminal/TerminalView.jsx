@@ -62,6 +62,7 @@ const specialKeys = [
   { label: 'C-e', data: '\x05' },
   { label: 'C-z', data: '\x1a' },
   { label: 'C-l', data: '\x0c' },
+  { label: 'Enter', data: '\r' },
   { label: '\u2191', data: '\x1b[A' },
   { label: '\u2193', data: '\x1b[B' },
   { label: '\u2190', data: '\x1b[D' },
