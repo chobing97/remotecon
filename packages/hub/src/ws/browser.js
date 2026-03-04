@@ -6,7 +6,11 @@ const { MSG, encode, decode } = require('./protocol');
 function handleBrowserConnection(ws, session) {
   session.browserWss.add(ws);
 
-  // 이전 출력 재생
+  // 웹 터미널 상태 초기화 후 이전 출력 재생
+  if (ws.readyState === WebSocket.OPEN) {
+    // RIS (Reset to Initial State) — 웹 xterm 상태 클리어
+    ws.send(Buffer.from('\x1bc'));
+  }
   session.scrollback.forEach(data => {
     if (ws.readyState === WebSocket.OPEN) ws.send(data);
   });
@@ -18,7 +22,6 @@ function handleBrowserConnection(ws, session) {
       name: session.name,
       recording: session.recording,
     }));
-    // CLI 터미널 크기 전송 → 웹 xterm.js가 맞춤
     if (session.cols && session.rows) {
       ws.send(encode(MSG.RESIZE, { cols: session.cols, rows: session.rows }));
     }

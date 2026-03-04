@@ -1,9 +1,22 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const { WebSocket } = require('ws');
 
 const RECONNECT_DELAY = 3000;
 const MAX_RECONNECT_DELAY = 30000;
+
+const LOG_DIR = path.join(process.env.HOME || '~', '.remotecon');
+const LOG_FILE = path.join(LOG_DIR, 'connection.log');
+
+function log(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  try {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+    fs.appendFileSync(LOG_FILE, line);
+  } catch {}
+}
 
 /**
  * Hub 서버의 /ws/terminal 에 연결하고 PTY I/O를 중계합니다.
@@ -18,10 +31,13 @@ function connectToHub({ hubUrl, sessionId, getToken, pty, onConnected, onDisconn
   async function connect() {
     if (closed) return;
 
+    log(`connect attempt (delay=${delay}ms)`);
+
     let token;
     try {
       token = await getToken();
-    } catch {
+    } catch (err) {
+      log(`token refresh failed: ${err.message}`);
       scheduleReconnect();
       return;
     }
@@ -33,6 +49,7 @@ function connectToHub({ hubUrl, sessionId, getToken, pty, onConnected, onDisconn
     ws.on('open', () => {
       connected = true;
       delay = RECONNECT_DELAY;
+      log('connected');
       onConnected?.();
     });
 
@@ -57,11 +74,13 @@ function connectToHub({ hubUrl, sessionId, getToken, pty, onConnected, onDisconn
       }
     });
 
-    ws.on('close', (code) => {
+    ws.on('close', (code, reason) => {
       const wasConnected = connected;
       connected = false;
+      log(`close code=${code} reason=${reason || ''} wasConnected=${wasConnected}`);
 
       if (code === 4001) {
+        log('session deleted by server — exiting');
         closed = true;
         pty.kill();
         return;
@@ -71,8 +90,12 @@ function connectToHub({ hubUrl, sessionId, getToken, pty, onConnected, onDisconn
       scheduleReconnect();
     });
 
-    ws.on('error', () => {
-      // 'close' 이벤트가 이어서 발생하므로 여기서는 무시
+    ws.on('error', (err) => {
+      log(`error: ${err.message}`);
+    });
+
+    ws.on('unexpected-response', (req, res) => {
+      log(`unexpected-response: HTTP ${res.statusCode}`);
     });
   }
 
