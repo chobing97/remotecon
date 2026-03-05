@@ -100,10 +100,15 @@ export default function TerminalView({ sessionId, tabId, active }) {
     }
   }, [active, fit]);
 
-  // outerMaxHeight 변경 후 xterm 리사이즈 → 커서가 보이도록 스크롤
+  // outerMaxHeight 변경 후 xterm 리사이즈 → 커서가 보이도록 스크롤 + 수평 스크롤 보존
   useEffect(() => {
     if (outerMaxHeight != null) {
-      const id = setTimeout(() => { fit(); scrollToCursor(); }, 50);
+      const savedScrollLeft = outerRef.current?.scrollLeft ?? 0;
+      const id = setTimeout(() => {
+        fit();
+        scrollToCursor();
+        if (outerRef.current) outerRef.current.scrollLeft = savedScrollLeft;
+      }, 50);
       return () => clearTimeout(id);
     }
   }, [outerMaxHeight, fit, scrollToCursor]);
