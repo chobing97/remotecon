@@ -361,8 +361,12 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           lastTapTime = 0;
           onDirectInputChange?.(true);
 
+          // 터미널 맨 아래로 스크롤 (키보드로 viewport가 밀리는 문제 방지)
+          term.scrollToBottom();
+          viewport.scrollTop = viewport.scrollHeight;
+          proxy.scrollTop = proxy.scrollHeight;
+
           // xterm textarea 대신 직접 만든 input으로 키보드 열기
-          // iOS에서 예측 입력 우회하여 즉시 전송
           const hiddenInput = document.createElement('input');
           hiddenInput.type = 'text';
           hiddenInput.autocomplete = 'off';
@@ -380,43 +384,40 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           });
           document.body.appendChild(hiddenInput);
 
-          let prevComposition = '';
+          // input value diff 기반 — 조합 여부 무관하게 즉시 전송
+          let lastValue = '';
 
-          hiddenInput.addEventListener('input', (e) => {
-            if (e.isComposing) return; // compositionend에서 처리
+          hiddenInput.addEventListener('input', () => {
             const val = hiddenInput.value;
-            if (val) {
-              sendInput(val);
-              hiddenInput.value = '';
+            if (val === lastValue) return;
+            if (val.length > lastValue.length && val.startsWith(lastValue)) {
+              // 문자 추가
+              sendInput(val.slice(lastValue.length));
+            } else if (val.length < lastValue.length) {
+              // 문자 삭제 (조합 중 backspace)
+              const deleted = lastValue.length - val.length;
+              sendInput('\x7f'.repeat(deleted));
+            } else {
+              // 대체 (한글 조합 등): 이전 지우고 새로 전송
+              sendInput('\x7f'.repeat(lastValue.length));
+              if (val) sendInput(val);
             }
-          });
-
-          hiddenInput.addEventListener('compositionupdate', (e) => {
-            const newText = e.data || '';
-            if (newText.length > prevComposition.length && newText.startsWith(prevComposition)) {
-              // 추가된 문자만 전송 (영문 조합)
-              sendInput(newText.slice(prevComposition.length));
-            } else if (newText !== prevComposition) {
-              // 대체 (한글 등): 이전 문자 지우고 새로 전송
-              if (prevComposition.length > 0) {
-                sendInput('\x7f'.repeat(prevComposition.length));
-              }
-              if (newText) sendInput(newText);
-            }
-            prevComposition = newText;
+            lastValue = val;
           });
 
           hiddenInput.addEventListener('compositionend', () => {
-            prevComposition = '';
+            // 조합 완료 후 value 초기화 (다음 입력을 위해)
+            // compositionend 후 input 이벤트가 올 수 있으므로 lastValue도 리셋
+            lastValue = '';
             hiddenInput.value = '';
           });
 
-          // Enter 키 처리
           hiddenInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
               sendInput('\r');
-            } else if (e.key === 'Backspace' && !e.isComposing) {
+            } else if (e.key === 'Backspace' && !hiddenInput.value) {
+              // input이 비어있을 때 backspace (조합 중이 아닌 경우)
               e.preventDefault();
               sendInput('\x7f');
             }
@@ -424,12 +425,11 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
 
           hiddenInput.focus();
 
-          // 키보드 닫힘 감지 → 정리
           function cleanup() {
             hiddenInput.remove();
             proxy.style.pointerEvents = '';
             onDirectInputChange?.(false);
-            prevComposition = '';
+            lastValue = '';
           }
 
           const vv = window.visualViewport;
