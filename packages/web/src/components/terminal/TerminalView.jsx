@@ -15,14 +15,27 @@ export default function TerminalView({ sessionId, tabId, active }) {
   const [inputBarHidden, setInputBarHidden] = useState(false);
   const [directInput, setDirectInput] = useState(false);
   const [kbTop, setKbTop] = useState(-1);
+  const [outerMaxHeight, setOuterMaxHeight] = useState(null);
   const outerRef = useRef(null);
 
-  // directInput 모드에서 visual viewport 추적 (바 위치 + 터미널 높이 제한)
+  // directInput 모드에서 visual viewport 추적
   useEffect(() => {
-    if (!directInput) { setKbTop(-1); return; }
+    if (!directInput) { setKbTop(-1); setOuterMaxHeight(null); return; }
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => setKbTop(vv.offsetTop + vv.height);
+    let maxHeightFrozen = false;
+    const update = () => {
+      setKbTop(vv.offsetTop + vv.height);
+      // maxHeight는 키보드가 완전히 열린 시점에 한 번만 설정 (레이아웃 떨림 방지)
+      if (!maxHeightFrozen && outerRef.current) {
+        const kbHeight = window.innerHeight - vv.height;
+        if (kbHeight > 100) {
+          maxHeightFrozen = true;
+          const outerTop = outerRef.current.getBoundingClientRect().top;
+          setOuterMaxHeight(vv.offsetTop + vv.height - outerTop - 44);
+        }
+      }
+    };
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
     update();
@@ -120,8 +133,9 @@ export default function TerminalView({ sessionId, tabId, active }) {
         </button>
       )}
       <div ref={outerRef} style={{
-        flex: 1, overflowX: 'auto', overflowY: 'hidden', minHeight: 0, position: 'relative',
-        ...(kbTop > 0 && outerRef.current ? { maxHeight: kbTop - outerRef.current.getBoundingClientRect().top - 44, flex: 'none' } : {}),
+        flex: outerMaxHeight != null ? 'none' : 1,
+        maxHeight: outerMaxHeight ?? undefined,
+        overflowX: 'auto', overflowY: 'hidden', minHeight: 0, position: 'relative',
       }}>
         <div
           ref={containerRef}
