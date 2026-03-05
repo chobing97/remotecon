@@ -372,9 +372,9 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           // xterm textarea 대신 직접 만든 input으로 키보드 열기
           const hiddenInput = document.createElement('input');
           hiddenInput.type = 'text';
-          hiddenInput.autocomplete = 'off';
-          hiddenInput.autocorrect = 'off';
-          hiddenInput.autocapitalize = 'none';
+          hiddenInput.setAttribute('autocomplete', 'off');
+          hiddenInput.setAttribute('autocorrect', 'off');
+          hiddenInput.setAttribute('autocapitalize', 'none');
           hiddenInput.spellcheck = false;
           hiddenInput.enterKeyHint = 'send';
           Object.assign(hiddenInput.style, {
@@ -387,52 +387,63 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           });
           document.body.appendChild(hiddenInput);
 
-          // input value diff 기반 — 조합 중에는 diff, 아니면 즉시 전송 후 초기화
+          // 하이브리드 입력: keydown(ASCII 직접 전송) + input(CJK diff 폴백)
           let lastValue = '';
-          let composing = false;
-
-          hiddenInput.addEventListener('compositionstart', () => {
-            composing = true;
-          });
+          let handledByKeydown = false;
 
           hiddenInput.addEventListener('compositionend', () => {
-            composing = false;
-            // 조합 완료 후 value 초기화 (다음 입력을 위해)
             lastValue = '';
             hiddenInput.value = '';
           });
 
-          hiddenInput.addEventListener('input', () => {
-            const val = hiddenInput.value;
-            if (val === lastValue) return;
-            if (val.length > lastValue.length && val.startsWith(lastValue)) {
-              // 문자 추가
-              sendInput(val.slice(lastValue.length));
-            } else if (val.length < lastValue.length) {
-              // 문자 삭제 (조합 중 backspace)
-              const deleted = lastValue.length - val.length;
-              sendInput('\x7f'.repeat(deleted));
-            } else {
-              // 대체 (한글 조합 등): 이전 지우고 새로 전송
-              sendInput('\x7f'.repeat(lastValue.length));
-              if (val) sendInput(val);
+          hiddenInput.addEventListener('keydown', (e) => {
+            handledByKeydown = false;
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              sendInput('\r');
+              handledByKeydown = true;
+              return;
             }
-            lastValue = val;
-            // 조합 중이 아니면 즉시 초기화 → 글자 단위 독립 전송 (iOS 예측입력 배칭 방지)
-            if (!composing) {
+            if (e.key === 'Backspace') {
+              if (!e.isComposing) {
+                e.preventDefault();
+                sendInput('\x7f');
+                handledByKeydown = true;
+              }
+              return;
+            }
+            // ASCII 1글자: keydown에서 직접 전송 (iOS/Android 예측입력 우회)
+            if (e.key.length === 1 && e.key.charCodeAt(0) >= 32 && e.key.charCodeAt(0) < 127) {
+              e.preventDefault();
+              sendInput(e.key);
+              handledByKeydown = true;
               lastValue = '';
               hiddenInput.value = '';
             }
           });
 
-          hiddenInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              sendInput('\r');
-            } else if (e.key === 'Backspace' && !hiddenInput.value) {
-              // input이 비어있을 때 backspace (조합 중이 아닌 경우)
-              e.preventDefault();
-              sendInput('\x7f');
+          hiddenInput.addEventListener('input', (e) => {
+            // keydown에서 이미 처리된 경우 스킵
+            if (handledByKeydown) {
+              handledByKeydown = false;
+              return;
+            }
+            const val = hiddenInput.value;
+            if (val === lastValue) return;
+            if (val.length > lastValue.length && val.startsWith(lastValue)) {
+              sendInput(val.slice(lastValue.length));
+            } else if (val.length < lastValue.length) {
+              const deleted = lastValue.length - val.length;
+              sendInput('\x7f'.repeat(deleted));
+            } else {
+              sendInput('\x7f'.repeat(lastValue.length));
+              if (val) sendInput(val);
+            }
+            lastValue = val;
+            // CJK 조합 중이 아니면 즉시 초기화 (Android keydown 폴백 대응)
+            if (e.inputType !== 'insertCompositionText') {
+              lastValue = '';
+              hiddenInput.value = '';
             }
           });
 
