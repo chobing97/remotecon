@@ -113,11 +113,11 @@ export default function TerminalView({ sessionId, tabId, active }) {
     >
       {!isMobile && (
         <button
-          onClick={() => { if (window.confirm('세션을 닫으시겠습니까?')) closeTab(tabId); }}
+          onClick={() => { if (window.confirm('세션 연결을 끊으시겠습니까?')) closeTab(tabId); }}
           style={{
             position: 'absolute',
             top: 6,
-            left: 6,
+            right: 6,
             zIndex: 15,
             fontSize: 11,
             padding: '3px 8px',
@@ -129,7 +129,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
             border: '1px solid var(--red)',
           }}
         >
-          Close
+          Disconnect
         </button>
       )}
       <div ref={outerRef} style={{

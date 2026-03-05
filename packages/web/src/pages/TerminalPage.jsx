@@ -33,10 +33,10 @@ export default function TerminalPage() {
             }} />
             <span style={styles.titleText}>{activeTab.name}</span>
             <button
-              onClick={() => { if (window.confirm('세션을 닫으시겠습니까?')) closeTab(activeTab.id); }}
+              onClick={() => { if (window.confirm('세션 연결을 끊으시겠습니까?')) closeTab(activeTab.id); }}
               style={styles.closeBtn}
             >
-              Close
+              Disconnect
             </button>
           </div>
         )
