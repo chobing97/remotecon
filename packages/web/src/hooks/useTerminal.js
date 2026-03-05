@@ -454,9 +454,13 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           // xterm 이벤트 핸들러 완료 후 포커스 (포커스 가로채기 방지)
           setTimeout(() => hiddenInput.focus({ preventScroll: true }), 50);
 
+          // 키보드 열릴 때 터미널 컨테이너 높이 직접 제한 (React 상태 대신 DOM 직접 조작)
+          const outer = container.parentElement;
+
           function cleanup() {
             hiddenInput.remove();
             proxy.style.pointerEvents = '';
+            if (outer) { outer.style.maxHeight = ''; outer.style.flex = ''; }
             onDirectInputChange?.(false);
             lastValue = '';
           }
@@ -464,8 +468,16 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           const vv = window.visualViewport;
           if (vv) {
             let kbWasOpen = false;
+            let maxHeightFrozen = false;
             const onVVResize = () => {
               const kbHeight = window.innerHeight - vv.height;
+              // 키보드 열림: outer 높이 제한
+              if (!maxHeightFrozen && outer && kbHeight > 100) {
+                maxHeightFrozen = true;
+                const outerTop = outer.getBoundingClientRect().top;
+                outer.style.maxHeight = (vv.offsetTop + vv.height - outerTop - 44) + 'px';
+                outer.style.flex = 'none';
+              }
               if (!kbWasOpen && kbHeight > 100) {
                 kbWasOpen = true;
               } else if (kbWasOpen && kbHeight < 50) {

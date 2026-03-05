@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useTerminal } from '../../hooks/useTerminal';
 import { useTabStore } from '../../store/tabs';
 
@@ -15,27 +15,13 @@ export default function TerminalView({ sessionId, tabId, active }) {
   const [inputBarHidden, setInputBarHidden] = useState(false);
   const [directInput, setDirectInput] = useState(false);
   const [kbTop, setKbTop] = useState(-1);
-  const [outerMaxHeight, setOuterMaxHeight] = useState(null);
-  const outerRef = useRef(null);
 
-  // directInput 모드에서 visual viewport 추적
+  // directInput 모드에서 kbTop 추적 (outerMaxHeight는 useTerminal에서 DOM 직접 조작)
   useEffect(() => {
-    if (!directInput) { setKbTop(-1); setOuterMaxHeight(null); return; }
+    if (!directInput) { setKbTop(-1); return; }
     const vv = window.visualViewport;
     if (!vv) return;
-    let maxHeightFrozen = false;
-    const update = () => {
-      setKbTop(vv.offsetTop + vv.height);
-      // maxHeight는 키보드가 완전히 열린 시점에 한 번만 설정 (레이아웃 떨림 방지)
-      if (!maxHeightFrozen && outerRef.current) {
-        const kbHeight = window.innerHeight - vv.height;
-        if (kbHeight > 100) {
-          maxHeightFrozen = true;
-          const outerTop = outerRef.current.getBoundingClientRect().top;
-          setOuterMaxHeight(vv.offsetTop + vv.height - outerTop - 44);
-        }
-      }
-    };
+    const update = () => setKbTop(vv.offsetTop + vv.height);
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
     update();
@@ -132,9 +118,8 @@ export default function TerminalView({ sessionId, tabId, active }) {
           Disconnect
         </button>
       )}
-      <div ref={outerRef} style={{
-        flex: outerMaxHeight != null ? 'none' : 1,
-        maxHeight: outerMaxHeight ?? undefined,
+      <div style={{
+        flex: 1,
         overflowX: 'auto', overflowY: 'hidden', minHeight: 0, position: 'relative',
       }}>
         <div
