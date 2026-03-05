@@ -387,8 +387,20 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           });
           document.body.appendChild(hiddenInput);
 
-          // input value diff 기반 — 조합 여부 무관하게 즉시 전송
+          // input value diff 기반 — 조합 중에는 diff, 아니면 즉시 전송 후 초기화
           let lastValue = '';
+          let composing = false;
+
+          hiddenInput.addEventListener('compositionstart', () => {
+            composing = true;
+          });
+
+          hiddenInput.addEventListener('compositionend', () => {
+            composing = false;
+            // 조합 완료 후 value 초기화 (다음 입력을 위해)
+            lastValue = '';
+            hiddenInput.value = '';
+          });
 
           hiddenInput.addEventListener('input', () => {
             const val = hiddenInput.value;
@@ -406,13 +418,11 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
               if (val) sendInput(val);
             }
             lastValue = val;
-          });
-
-          hiddenInput.addEventListener('compositionend', () => {
-            // 조합 완료 후 value 초기화 (다음 입력을 위해)
-            // compositionend 후 input 이벤트가 올 수 있으므로 lastValue도 리셋
-            lastValue = '';
-            hiddenInput.value = '';
+            // 조합 중이 아니면 즉시 초기화 → 글자 단위 독립 전송 (iOS 예측입력 배칭 방지)
+            if (!composing) {
+              lastValue = '';
+              hiddenInput.value = '';
+            }
           });
 
           hiddenInput.addEventListener('keydown', (e) => {
