@@ -252,7 +252,8 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
   proxy.className = 'touch-scroll-proxy';
   Object.assign(proxy.style, {
     position: 'absolute',
-    top: '0', left: '0', right: '0', bottom: '0',
+    top: '0', left: '0', right: '0',
+    height: viewport.clientHeight + 'px',
     overflowY: 'auto',
     zIndex: '10',
     touchAction: 'pan-x pan-y',
@@ -297,12 +298,14 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
 
   // scroll-area 높이 변경 감시 (새 출력 도착 시)
   const ro = new ResizeObserver(() => {
+    proxy.style.height = viewport.clientHeight + 'px';
     spacer.style.height = scrollArea.offsetHeight + 'px';
     if (autoScroll) {
       proxy.scrollTop = viewport.scrollTop;
     }
   });
   ro.observe(scrollArea);
+  ro.observe(viewport);
 
   // Pinch-to-zoom: fontSize 동적 변경
   let pinching = false;

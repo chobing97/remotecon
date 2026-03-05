@@ -102,7 +102,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
           Close
         </button>
       )}
-      <div style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', minHeight: 0, position: 'relative', paddingBottom: directInput ? 44 : 0 }}>
+      <div style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', minHeight: 0, position: 'relative' }}>
         <div
           ref={containerRef}
           style={{ minWidth: '100%', height: '100%' }}
