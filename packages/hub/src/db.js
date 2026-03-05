@@ -3,6 +3,8 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const { createLogger } = require('./logger');
+const log = createLogger('db');
 
 const SQLITE_PATH = process.env.SQLITE_PATH || path.join(__dirname, '../data/remotecon.db');
 
@@ -13,14 +15,37 @@ function getDb() {
 
   // Ensure directory exists
   const dir = path.dirname(SQLITE_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const dirExists = fs.existsSync(dir);
+  const fileExists = fs.existsSync(SQLITE_PATH);
+  log.info(`open path=${SQLITE_PATH} dirExists=${dirExists} fileExists=${fileExists}`);
+
+  if (!dirExists) fs.mkdirSync(dir, { recursive: true });
 
   db = new Database(SQLITE_PATH);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
   migrate(db);
+  logDbSummary(db);
   return db;
+}
+
+function logDbSummary(db) {
+  try {
+    const users = db.prepare('SELECT COUNT(*) as cnt FROM users').get().cnt;
+    const activeSessions = db.prepare("SELECT COUNT(*) as cnt FROM sessions WHERE closed_at IS NULL").get().cnt;
+    const closedSessions = db.prepare("SELECT COUNT(*) as cnt FROM sessions WHERE closed_at IS NOT NULL").get().cnt;
+    const recordings = db.prepare('SELECT COUNT(*) as cnt FROM recordings').get().cnt;
+    const webhooks = db.prepare('SELECT COUNT(*) as cnt FROM webhooks').get().cnt;
+    log.info(`DB summary: users=${users} activeSessions=${activeSessions} closedSessions=${closedSessions} recordings=${recordings} webhooks=${webhooks}`);
+
+    if (activeSessions > 0) {
+      const rows = db.prepare("SELECT id, user_id, name, created_at FROM sessions WHERE closed_at IS NULL").all();
+      rows.forEach(r => log.info(`  active session: id=${r.id} userId=${r.user_id} name=${r.name} created=${r.created_at}`));
+    }
+  } catch (err) {
+    log.error(`DB summary failed: ${err.message}`);
+  }
 }
 
 function migrate(db) {

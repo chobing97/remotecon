@@ -6,6 +6,8 @@ const { verifyIdToken } = require('../passport');
 const { getSession } = require('../services/sessions');
 const { handleTerminalConnection } = require('./terminal');
 const { handleBrowserConnection } = require('./browser');
+const { createLogger } = require('../logger');
+const log = createLogger('ws');
 
 // 단기 브라우저 WS 토큰
 const browserTokens = new Map();
@@ -53,27 +55,42 @@ function setupWebSocket(server) {
 
   server.on('upgrade', async (req, socket, head) => {
     const url = new URL(req.url, 'http://localhost');
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
     // CLI 터미널 연결
     if (url.pathname === '/ws/terminal') {
+      const sessionId = url.searchParams.get('sessionId');
+      log.debug(`CLI upgrade ip=${clientIp} sessionId=${sessionId}`);
+
       const idToken = req.headers['authorization']?.replace('Bearer ', '');
-      if (!idToken) return rejectSocket(socket, 401, 'Unauthorized');
+      if (!idToken) {
+        log.warn(`CLI rejected: no auth token, sessionId=${sessionId}`);
+        return rejectSocket(socket, 401, 'Unauthorized');
+      }
 
       let user;
       try {
         user = await verifyIdToken(idToken);
-      } catch {
+      } catch (err) {
+        log.warn(`CLI rejected: invalid token, sessionId=${sessionId} err=${err.message}`);
         return rejectSocket(socket, 401, 'Invalid token');
       }
 
-      const sessionId = url.searchParams.get('sessionId');
+      log.debug(`CLI auth ok userId=${user.id} email=${user.email} sessionId=${sessionId}`);
+
       const session = getSession(sessionId);
-      if (!session || session.userId !== user.id) {
+      if (!session) {
+        log.warn(`CLI rejected: session not found, sessionId=${sessionId} userId=${user.id}`);
+        return rejectSocket(socket, 403, 'Forbidden');
+      }
+      if (session.userId !== user.id) {
+        log.error(`CLI rejected: userId mismatch, sessionId=${sessionId} session.userId=${session.userId} token.userId=${user.id}`);
         return rejectSocket(socket, 403, 'Forbidden');
       }
 
       wss.handleUpgrade(req, socket, head, (ws) => {
         wss.emit('connection', ws, req);
+        log.info(`CLI connected sessionId=${sessionId} name=${session.name}`);
         handleTerminalConnection(ws, session);
       });
       return;
@@ -83,23 +100,39 @@ function setupWebSocket(server) {
     const browserMatch = url.pathname.match(/^\/ws\/session\/([^/]+)$/);
     if (browserMatch) {
       const sessionId = browserMatch[1];
+      log.debug(`Browser upgrade ip=${clientIp} sessionId=${sessionId}`);
+
       const wsToken = url.searchParams.get('token');
-      if (!wsToken) return rejectSocket(socket, 401, 'Unauthorized');
+      if (!wsToken) {
+        log.warn(`Browser rejected: no ws token, sessionId=${sessionId}`);
+        return rejectSocket(socket, 401, 'Unauthorized');
+      }
 
       const userId = consumeBrowserToken(wsToken);
-      if (!userId) return rejectSocket(socket, 401, 'Invalid or expired token');
+      if (!userId) {
+        log.warn(`Browser rejected: invalid/expired ws token, sessionId=${sessionId}`);
+        return rejectSocket(socket, 401, 'Invalid or expired token');
+      }
 
       const session = getSession(sessionId);
-      if (!session) return rejectSocket(socket, 404, 'Session not found');
-      if (session.userId !== userId) return rejectSocket(socket, 403, 'Forbidden');
+      if (!session) {
+        log.warn(`Browser rejected: session not found, sessionId=${sessionId} userId=${userId}`);
+        return rejectSocket(socket, 404, 'Session not found');
+      }
+      if (session.userId !== userId) {
+        log.error(`Browser rejected: userId mismatch, sessionId=${sessionId} session.userId=${session.userId} token.userId=${userId}`);
+        return rejectSocket(socket, 403, 'Forbidden');
+      }
 
       wss.handleUpgrade(req, socket, head, (ws) => {
         wss.emit('connection', ws, req);
+        log.info(`Browser connected sessionId=${sessionId} name=${session.name} viewers=${session.browserWss.size + 1}`);
         handleBrowserConnection(ws, session);
       });
       return;
     }
 
+    log.warn(`Upgrade rejected: unknown path ${url.pathname} ip=${clientIp}`);
     rejectSocket(socket, 404, 'Not found');
   });
 

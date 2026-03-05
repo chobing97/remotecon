@@ -69,6 +69,8 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`[hub] Running on port ${PORT}`);
   console.log(`[hub] webDist: ${webDist} (exists: ${fs.existsSync(webDist)})`);
+  console.log(`[hub] LOG_LEVEL: ${process.env.LOG_LEVEL || 'info'}`);
+  console.log(`[hub] SQLITE_PATH: ${process.env.SQLITE_PATH || 'default (data/remotecon.db)'}`);
 });
 
 // Graceful shutdown

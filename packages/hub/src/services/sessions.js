@@ -4,6 +4,8 @@ const { Terminal } = require('@xterm/headless');
 const { SerializeAddon } = require('@xterm/addon-serialize');
 const { Unicode11Addon } = require('@xterm/addon-unicode11');
 const { getDb } = require('../db');
+const { createLogger } = require('../logger');
+const log = createLogger('sessions');
 
 // 인메모리: WebSocket 객체, scrollback 버퍼
 const live = new Map();
@@ -11,6 +13,7 @@ const live = new Map();
 const SCROLLBACK_LIMIT = 1000;
 
 function createSession({ id, name, userId, recording = false }) {
+  log.info(`create id=${id} name=${name} userId=${userId} recording=${recording}`);
   // DB에 메타데이터 저장
   getDb().prepare(
     'INSERT INTO sessions (id, user_id, name, recording) VALUES (?, ?, ?, ?)'
@@ -47,18 +50,26 @@ function reviveRuntime(id, name, userId, recording) {
 
 function getSession(id) {
   const mem = live.get(id);
-  if (mem) return mem;
+  if (mem) {
+    log.trace(`getSession id=${id} → found in memory`);
+    return mem;
+  }
 
   // 인메모리에 없으면 DB에서 복원 (활성 세션만)
   const row = getDb().prepare(
     'SELECT id, user_id, name, recording FROM sessions WHERE id = ? AND closed_at IS NULL'
   ).get(id);
-  if (!row) return null;
+  if (!row) {
+    log.warn(`getSession id=${id} → not found (memory=no, db=no)`);
+    return null;
+  }
 
+  log.info(`getSession id=${id} → revived from DB (userId=${row.user_id} name=${row.name})`);
   return reviveRuntime(row.id, row.name, row.user_id, !!row.recording);
 }
 
 function deleteSession(id) {
+  log.info(`delete id=${id}`);
   const session = live.get(id);
   if (session?.headlessTerm) session.headlessTerm.dispose();
   live.delete(id);

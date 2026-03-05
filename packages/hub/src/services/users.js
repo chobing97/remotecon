@@ -1,8 +1,11 @@
 'use strict';
 
 const { getDb } = require('../db');
+const { createLogger } = require('../logger');
+const log = createLogger('users');
 
 function upsertUser({ id, email, name }) {
+  log.debug(`upsert id=${id} email=${email}`);
   const db = getDb();
   db.prepare(`
     INSERT INTO users (id, email, name)

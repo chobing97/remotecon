@@ -5,15 +5,19 @@ const { MSG, encode } = require('./protocol');
 const { deleteSession, appendScrollback, writeToHeadless, resizeHeadless } = require('../services/sessions');
 const { captureFrame, isRecording, stopRecording } = require('../services/recordings');
 const { processOutput } = require('../services/webhooks');
+const { createLogger } = require('../logger');
+const log = createLogger('ws/terminal');
 
 function handleTerminalConnection(ws, session) {
   // 재연결 시 삭제 타이머 취소
   if (session._deleteTimer) {
+    log.info(`cancel delete timer sessionId=${session.id}`);
     clearTimeout(session._deleteTimer);
     session._deleteTimer = null;
   }
 
   session.terminalWs = ws;
+  log.info(`CLI attached sessionId=${session.id} name=${session.name} browsers=${session.browserWss.size}`);
   broadcastText(session, encode(MSG.STATUS, { status: 'connected' }));
 
   // 세션 정보 전송
@@ -56,23 +60,27 @@ function handleTerminalConnection(ws, session) {
 
   ws.on('close', (code) => {
     session.terminalWs = null;
+    log.info(`CLI disconnected sessionId=${session.id} code=${code}`);
 
     // 녹화 중이면 저장
     if (isRecording(session.id)) {
       stopRecording(session.id, session.userId, session.name).catch((err) => {
-        console.error(`[ws/terminal] recording save failed:`, err.message);
+        log.error(`recording save failed sessionId=${session.id} err=${err.message}`);
       });
     }
 
     if (code === 4000) {
       // CLI가 의도적으로 종료 → 즉시 삭제
+      log.info(`CLI intentional close → deleting sessionId=${session.id}`);
       broadcastText(session, encode(MSG.STATUS, { status: 'terminated' }));
       deleteSession(session.id);
       session.browserWss.forEach(bws => bws.close());
     } else {
       // 네트워크 끊김 등 → 재연결 대기
+      log.warn(`CLI unexpected close → waiting 60s for reconnect sessionId=${session.id}`);
       broadcastText(session, encode(MSG.STATUS, { status: 'reconnecting' }));
       session._deleteTimer = setTimeout(() => {
+        log.warn(`delete timer fired → deleting sessionId=${session.id}`);
         deleteSession(session.id);
         session.browserWss.forEach(bws => bws.close());
       }, 60_000);
@@ -80,7 +88,7 @@ function handleTerminalConnection(ws, session) {
   });
 
   ws.on('error', (err) => {
-    console.error(`[ws/terminal] error (${session.id}):`, err.message);
+    log.error(`CLI error sessionId=${session.id} err=${err.message}`);
   });
 }
 
