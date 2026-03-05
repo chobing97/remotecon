@@ -14,6 +14,23 @@ export default function TerminalView({ sessionId, tabId, active }) {
   const [autoScroll, setAutoScroll] = useState(true);
   const [inputBarHidden, setInputBarHidden] = useState(false);
   const [directInput, setDirectInput] = useState(false);
+  const [kbTop, setKbTop] = useState(-1);
+  const outerRef = useRef(null);
+
+  // directInput 모드에서 visual viewport 추적 (바 위치 + 터미널 높이 제한)
+  useEffect(() => {
+    if (!directInput) { setKbTop(-1); return; }
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setKbTop(vv.offsetTop + vv.height);
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    update();
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [directInput]);
 
   // Select 모드 진입/해제 시 히스토리 관리 (뒤로가기 대응)
   const toggleSelectMode = useCallback(() => {
@@ -102,7 +119,10 @@ export default function TerminalView({ sessionId, tabId, active }) {
           Close
         </button>
       )}
-      <div style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', minHeight: 0, position: 'relative' }}>
+      <div ref={outerRef} style={{
+        flex: 1, overflowX: 'auto', overflowY: 'hidden', minHeight: 0, position: 'relative',
+        ...(kbTop > 0 && outerRef.current ? { maxHeight: kbTop - outerRef.current.getBoundingClientRect().top - 44, flex: 'none' } : {}),
+      }}>
         <div
           ref={containerRef}
           style={{ minWidth: '100%', height: '100%' }}
@@ -156,7 +176,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
           &#x2328;
         </button>
       )}
-      {isMobile && !inputBarHidden && <MobileInputBar tabId={tabId} onSend={sendInput} selectMode={selectMode} onToggleSelect={toggleSelectMode} onHide={() => setInputBarHidden(true)} directInput={directInput} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
+      {isMobile && !inputBarHidden && <MobileInputBar tabId={tabId} onSend={sendInput} selectMode={selectMode} onToggleSelect={toggleSelectMode} onHide={() => setInputBarHidden(true)} directInput={directInput} kbTop={kbTop} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
     </div>
   );
 }
@@ -275,27 +295,9 @@ function SelectOverlay({ termRef, onClose }) {
   );
 }
 
-function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, directInput, disabled }) {
+function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, directInput, kbTop, disabled }) {
   const [value, setValue] = useState(() => inputCache.get(tabId) || '');
-  const [kbTop, setKbTop] = useState(-1);
   const textareaRef = useRef(null);
-
-  // directInput 모드에서 키보드 바로 위 위치 추적 (top 기준)
-  useEffect(() => {
-    if (!directInput) { setKbTop(-1); return; }
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const update = () => {
-      setKbTop(vv.offsetTop + vv.height);
-    };
-    vv.addEventListener('resize', update);
-    vv.addEventListener('scroll', update);
-    update();
-    return () => {
-      vv.removeEventListener('resize', update);
-      vv.removeEventListener('scroll', update);
-    };
-  }, [directInput]);
 
   const submit = () => {
     if (disabled) return;
