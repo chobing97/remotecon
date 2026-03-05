@@ -15,13 +15,26 @@ export default function TerminalView({ sessionId, tabId, active }) {
   const [inputBarHidden, setInputBarHidden] = useState(false);
   const [directInput, setDirectInput] = useState(false);
   const [kbTop, setKbTop] = useState(-1);
+  const [outerMaxHeight, setOuterMaxHeight] = useState(null);
+  const outerRef = useRef(null);
 
-  // directInput 모드에서 kbTop 추적 (outerMaxHeight는 useTerminal에서 DOM 직접 조작)
+  // directInput 모드에서 visual viewport 추적
   useEffect(() => {
-    if (!directInput) { setKbTop(-1); return; }
+    if (!directInput) { setKbTop(-1); setOuterMaxHeight(null); return; }
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => setKbTop(vv.offsetTop + vv.height);
+    let maxHeightFrozen = false;
+    const update = () => {
+      setKbTop(vv.offsetTop + vv.height);
+      if (!maxHeightFrozen && outerRef.current) {
+        const kbHeight = window.innerHeight - vv.height;
+        if (kbHeight > 100) {
+          maxHeightFrozen = true;
+          const outerTop = outerRef.current.getBoundingClientRect().top;
+          setOuterMaxHeight(vv.offsetTop + vv.height - outerTop - 44);
+        }
+      }
+    };
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
     update();
@@ -66,7 +79,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
     setDirectInput(v);
   }, []);
 
-  const { attach, fit, dispose, sendInput, termRef, scrollToBottom } = useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, onDirectInputChange, mobileReadOnly: isMobile });
+  const { attach, fit, dispose, sendInput, termRef, scrollToBottom, scrollToCursor } = useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, onDirectInputChange, mobileReadOnly: isMobile });
   const attachedRef = useRef(false);
 
   useEffect(() => {
@@ -86,6 +99,14 @@ export default function TerminalView({ sessionId, tabId, active }) {
       return () => clearTimeout(id);
     }
   }, [active, fit]);
+
+  // outerMaxHeight 변경 후 xterm 리사이즈 → 커서가 보이도록 스크롤
+  useEffect(() => {
+    if (outerMaxHeight != null) {
+      const id = setTimeout(() => { fit(); scrollToCursor(); }, 50);
+      return () => clearTimeout(id);
+    }
+  }, [outerMaxHeight, fit, scrollToCursor]);
 
   return (
     <div
@@ -118,8 +139,9 @@ export default function TerminalView({ sessionId, tabId, active }) {
           Disconnect
         </button>
       )}
-      <div style={{
-        flex: 1,
+      <div ref={outerRef} style={{
+        flex: outerMaxHeight != null ? 'none' : 1,
+        maxHeight: outerMaxHeight ?? undefined,
         overflowX: 'auto', overflowY: 'hidden', minHeight: 0, position: 'relative',
       }}>
         <div
