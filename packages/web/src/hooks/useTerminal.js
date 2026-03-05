@@ -26,6 +26,7 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
   onStatusChangeRef.current = onStatusChange;
   const onDirectInputChangeRef = useRef(onDirectInputChange);
   onDirectInputChangeRef.current = onDirectInputChange;
+  const directInputRef = useRef(false);
 
   // CLI cols 기준으로 컨테이너 폭 설정 + 화면 높이에 맞춰 rows 계산
   function applyCliCols(term, cols) {
@@ -85,7 +86,7 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
       } else {
         fitAddon.fit();
       }
-    }, (v) => onAutoScrollChangeRef.current?.(v), (v) => onDirectInputChangeRef.current?.(v), sendInputDirect);
+    }, (v) => onAutoScrollChangeRef.current?.(v), (v) => { directInputRef.current = v; onDirectInputChangeRef.current?.(v); }, sendInputDirect);
 
     termRef.current = term;
     fitAddonRef.current = fitAddon;
@@ -105,6 +106,16 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
         applyCliCols(termRef.current, cliSizeRef.current.cols);
       } else {
         fitAddon.fit();
+      }
+      // directInput 모드에서 리사이즈 후 커서가 보이도록 스크롤
+      if (directInputRef.current && termRef.current) {
+        const term = termRef.current;
+        const buf = term.buffer.active;
+        const cursorLine = buf.baseY + buf.cursorY;
+        term.scrollToLine(Math.max(0, cursorLine - term.rows + 1));
+        const vp = element.querySelector('.xterm-viewport');
+        const px = element.querySelector('.touch-scroll-proxy');
+        if (vp && px) px.scrollTop = vp.scrollTop;
       }
     };
 

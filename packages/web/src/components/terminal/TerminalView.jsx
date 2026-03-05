@@ -79,7 +79,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
     setDirectInput(v);
   }, []);
 
-  const { attach, fit, dispose, sendInput, termRef, scrollToBottom, scrollToCursor } = useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, onDirectInputChange, mobileReadOnly: isMobile });
+  const { attach, fit, dispose, sendInput, termRef, scrollToBottom } = useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, onDirectInputChange, mobileReadOnly: isMobile });
   const attachedRef = useRef(false);
 
   useEffect(() => {
@@ -100,18 +100,16 @@ export default function TerminalView({ sessionId, tabId, active }) {
     }
   }, [active, fit]);
 
-  // outerMaxHeight 변경 후 xterm 리사이즈 → 커서가 보이도록 스크롤 + 수평 스크롤 보존
+  // outerMaxHeight 변경 후 수평 스크롤 위치 보존
   useEffect(() => {
-    if (outerMaxHeight != null) {
-      const savedScrollLeft = outerRef.current?.scrollLeft ?? 0;
-      const id = setTimeout(() => {
-        fit();
-        scrollToCursor();
+    if (outerMaxHeight != null && outerRef.current) {
+      const savedScrollLeft = outerRef.current.scrollLeft;
+      // ResizeObserver가 fit + scrollToCursor를 처리하므로 수평 스크롤만 복원
+      requestAnimationFrame(() => {
         if (outerRef.current) outerRef.current.scrollLeft = savedScrollLeft;
-      }, 50);
-      return () => clearTimeout(id);
+      });
     }
-  }, [outerMaxHeight, fit, scrollToCursor]);
+  }, [outerMaxHeight]);
 
   return (
     <div
