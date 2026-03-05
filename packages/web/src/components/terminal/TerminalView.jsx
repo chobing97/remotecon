@@ -282,11 +282,14 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dir
 
   // directInput 모드에서 키보드 높이 추적
   useEffect(() => {
+    console.log('[MIB] directInput changed:', directInput);
     if (!directInput) { setKbOffset(0); return; }
     const vv = window.visualViewport;
-    if (!vv) return;
+    if (!vv) { console.log('[MIB] no visualViewport'); return; }
     const update = () => {
-      setKbOffset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      console.log(`[MIB] vv.resize innerH=${window.innerHeight} vvH=${Math.round(vv.height)} vvOff=${Math.round(vv.offsetTop)} → kbOffset=${Math.round(offset)}`);
+      setKbOffset(offset);
     };
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);

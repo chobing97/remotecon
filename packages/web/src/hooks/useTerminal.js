@@ -239,6 +239,26 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
   const scrollArea = container.querySelector('.xterm-scroll-area');
   if (!viewport || !scrollArea) return;
 
+  // ── DEBUG OVERLAY ──
+  const dbgEl = document.createElement('pre');
+  Object.assign(dbgEl.style, {
+    position: 'fixed', top: '0', left: '0', right: '0',
+    zIndex: '9999', background: 'rgba(0,0,0,0.85)', color: '#0f0',
+    fontSize: '10px', padding: '4px 6px', margin: '0',
+    maxHeight: '30vh', overflowY: 'auto', pointerEvents: 'none',
+    whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+  });
+  document.body.appendChild(dbgEl);
+  const dbgLines = [];
+  function dbg(msg) {
+    const t = new Date().toLocaleTimeString('en', { hour12: false, fractionalSecondDigits: 1 });
+    dbgLines.push(`[${t}] ${msg}`);
+    if (dbgLines.length > 30) dbgLines.shift();
+    dbgEl.textContent = dbgLines.join('\n');
+    dbgEl.scrollTop = dbgEl.scrollHeight;
+  }
+  dbg('touch scroll setup');
+
   // 투명 스크롤 프록시 — 브라우저 네이티브 관성 스크롤 사용
   const proxy = document.createElement('div');
   const spacer = document.createElement('div');
@@ -362,18 +382,22 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
             let kbWasOpen = false;
             const onVVResize = () => {
               const kbHeight = window.innerHeight - vv.height;
+              dbg(`vvResize kbH=${Math.round(kbHeight)} wasOpen=${kbWasOpen} proxy=${proxy.style.pointerEvents}`);
               if (!kbWasOpen && kbHeight > 100) {
                 kbWasOpen = true;
+                dbg('KB OPEN detected');
               } else if (kbWasOpen && kbHeight < 50) {
-                // 키보드 닫힘
+                dbg('KB CLOSE detected → restore proxy');
                 vv.removeEventListener('resize', onVVResize);
                 proxy.style.pointerEvents = '';
                 onDirectInputChangeRef.current?.(false);
               }
             };
             vv.addEventListener('resize', onVVResize);
+            // 즉시 한번 체크 (이미 키보드가 열려있을 수 있음)
+            onVVResize();
           } else {
-            // fallback: visualViewport 미지원 시 blur 이벤트
+            dbg('no visualViewport');
             const xtextarea = term.textarea || container.querySelector('.xterm-helper-textarea');
             const onBlur = () => {
               xtextarea?.removeEventListener('blur', onBlur);
@@ -382,6 +406,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
             };
             xtextarea?.addEventListener('blur', onBlur);
           }
+          dbg(`doubletap! proxy.pe=${proxy.style.pointerEvents}`);
         } else {
           lastTapTime = now;
         }
