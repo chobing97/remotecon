@@ -382,7 +382,8 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           lastTapTime = 0;
           onDirectInputChange?.(true);
 
-          // 현재 스크롤 위치 유지 (키보드 열릴 때 내용이 밀려나가지 않도록)
+          // 페이지 스크롤 방지 (Android에서 composition 이벤트 시 브라우저가 페이지를 스크롤시킴)
+          document.documentElement.style.overflow = 'hidden';
 
           // xterm textarea 대신 직접 만든 input으로 키보드 열기
           // xterm의 내부 textarea가 포커스를 가로채지 않도록 blur
@@ -475,6 +476,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           function cleanup() {
             hiddenInput.remove();
             proxy.style.pointerEvents = '';
+            document.documentElement.style.overflow = '';
             onDirectInputChange?.(false);
             lastValue = '';
           }
