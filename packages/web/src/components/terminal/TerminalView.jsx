@@ -375,9 +375,9 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dir
   );
 
   if (directInput) {
-    // 키보드가 아직 올라오지 않았거나 화면 전체일 때 숨김
+    // 키보드가 충분히 올라올 때까지 숨김 (애니메이션 중 상단 번쩍임 방지)
     const kbHeight = window.innerHeight - (window.visualViewport?.height || window.innerHeight);
-    if (kbHeight < 50) return null;
+    if (kbHeight < 100) return null;
     // 바 높이(약 40px)를 빼서 키보드 바로 위에 배치
     const barTop = kbTop - 40;
     return (

@@ -237,16 +237,19 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
   const scrollToCursor = useCallback(() => {
     const term = termRef.current;
     if (!term) return;
+    // 커서가 보이도록 스크롤 (커서는 보통 버퍼 하단 근처)
     const buf = term.buffer.active;
-    // 커서가 보이는 영역 밖이면 커서 행으로 스크롤
-    const cursorAbsolute = buf.baseY + buf.cursorY;
-    const viewTop = buf.baseY;
-    const viewBottom = buf.baseY + term.rows - 1;
-    if (cursorAbsolute < viewTop || cursorAbsolute > viewBottom) {
-      term.scrollToLine(Math.max(0, cursorAbsolute - term.rows + 1));
+    const cursorLine = buf.baseY + buf.cursorY;
+    term.scrollToLine(Math.max(0, cursorLine - term.rows + 1));
+    // 터치 스크롤 프록시를 xterm viewport 위치에 동기화
+    const container = containerRef.current;
+    if (container) {
+      const viewport = container.querySelector('.xterm-viewport');
+      const proxy = container.querySelector('.touch-scroll-proxy');
+      if (viewport && proxy) {
+        proxy.scrollTop = viewport.scrollTop;
+      }
     }
-    // 터치 스크롤 프록시 동기화
-    scrollToBottomRef.current?.();
   }, []);
 
   return { attach, fit, dispose, sendInput, termRef, wsRef, scrollToBottom, scrollToCursor };
