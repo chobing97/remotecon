@@ -364,10 +364,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           lastTapTime = 0;
           onDirectInputChange?.(true);
 
-          // 터미널 맨 아래로 스크롤 (키보드로 viewport가 밀리는 문제 방지)
-          term.scrollToBottom();
-          viewport.scrollTop = viewport.scrollHeight;
-          proxy.scrollTop = proxy.scrollHeight;
+          // 현재 스크롤 위치 유지 (키보드 열릴 때 내용이 밀려나가지 않도록)
 
           // xterm textarea 대신 직접 만든 input으로 키보드 열기
           // xterm의 내부 textarea가 포커스를 가로채지 않도록 blur
@@ -383,11 +380,12 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           hiddenInput.enterKeyHint = 'send';
           Object.assign(hiddenInput.style, {
             position: 'fixed',
-            top: '-9999px',
+            bottom: '0',
             left: '0',
             opacity: '0',
             width: '1px',
             height: '1px',
+            pointerEvents: 'none',
           });
           document.body.appendChild(hiddenInput);
 
@@ -454,7 +452,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           });
 
           // xterm 이벤트 핸들러 완료 후 포커스 (포커스 가로채기 방지)
-          setTimeout(() => hiddenInput.focus(), 50);
+          setTimeout(() => hiddenInput.focus({ preventScroll: true }), 50);
 
           function cleanup() {
             hiddenInput.remove();
