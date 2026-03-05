@@ -287,8 +287,8 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dir
     const vv = window.visualViewport;
     if (!vv) { console.log('[MIB] no visualViewport'); return; }
     const update = () => {
-      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      console.log(`[MIB] vv.resize innerH=${window.innerHeight} vvH=${Math.round(vv.height)} vvOff=${Math.round(vv.offsetTop)} → kbOffset=${Math.round(offset)}`);
+      const offset = Math.max(0, window.innerHeight - vv.height);
+      console.log(`[MIB] vv.resize innerH=${window.innerHeight} vvH=${Math.round(vv.height)} → kbOffset=${Math.round(offset)}`);
       setKbOffset(offset);
     };
     vv.addEventListener('resize', update);
