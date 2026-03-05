@@ -73,22 +73,19 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
     term.loadAddon(unicode11);
     term.unicode.activeVersion = '11';
     term.open(element);
-    // 모바일 예측 입력 비활성화 → 키 입력 즉시 반영
-    const xtextarea = element.querySelector('.xterm-helper-textarea');
-    if (xtextarea) {
-      xtextarea.setAttribute('autocorrect', 'off');
-      xtextarea.setAttribute('autocomplete', 'off');
-      xtextarea.setAttribute('autocapitalize', 'off');
-      xtextarea.setAttribute('spellcheck', 'false');
-    }
     fitAddon.fit();
+    const sendInputDirect = (data) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'input', data }));
+      }
+    };
     scrollToBottomRef.current = setupMobileTouchScroll(element, term, () => {
       if (cliSizeRef.current) {
         applyCliCols(term, cliSizeRef.current.cols);
       } else {
         fitAddon.fit();
       }
-    }, (v) => onAutoScrollChangeRef.current?.(v), (v) => onDirectInputChangeRef.current?.(v));
+    }, (v) => onAutoScrollChangeRef.current?.(v), (v) => onDirectInputChangeRef.current?.(v), sendInputDirect);
 
     termRef.current = term;
     fitAddonRef.current = fitAddon;
@@ -240,7 +237,7 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
   return { attach, fit, dispose, sendInput, termRef, wsRef, scrollToBottom };
 }
 
-function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDirectInputChange) {
+function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDirectInputChange, sendInput) {
   if (!('ontouchstart' in window)) return null;
 
   const viewport = container.querySelector('.xterm-viewport');
@@ -360,12 +357,81 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
       if (dx < 300 && dy < 300) {
         const now = Date.now();
         if (now - lastTapTime < 300) {
-          // 프록시를 비활성화해야 xterm textarea가 포커스를 유지함
           proxy.style.pointerEvents = 'none';
-          term.focus();
           lastTapTime = 0;
           onDirectInputChange?.(true);
-          // visualViewport로 키보드 닫힘 감지 → 프록시 복원
+
+          // xterm textarea 대신 직접 만든 input으로 키보드 열기
+          // iOS에서 예측 입력 우회하여 즉시 전송
+          const hiddenInput = document.createElement('input');
+          hiddenInput.type = 'text';
+          hiddenInput.autocomplete = 'off';
+          hiddenInput.autocorrect = 'off';
+          hiddenInput.autocapitalize = 'none';
+          hiddenInput.spellcheck = false;
+          hiddenInput.enterKeyHint = 'send';
+          Object.assign(hiddenInput.style, {
+            position: 'fixed',
+            top: '-9999px',
+            left: '0',
+            opacity: '0',
+            width: '1px',
+            height: '1px',
+          });
+          document.body.appendChild(hiddenInput);
+
+          let prevComposition = '';
+
+          hiddenInput.addEventListener('input', (e) => {
+            if (e.isComposing) return; // compositionend에서 처리
+            const val = hiddenInput.value;
+            if (val) {
+              sendInput(val);
+              hiddenInput.value = '';
+            }
+          });
+
+          hiddenInput.addEventListener('compositionupdate', (e) => {
+            const newText = e.data || '';
+            if (newText.length > prevComposition.length && newText.startsWith(prevComposition)) {
+              // 추가된 문자만 전송 (영문 조합)
+              sendInput(newText.slice(prevComposition.length));
+            } else if (newText !== prevComposition) {
+              // 대체 (한글 등): 이전 문자 지우고 새로 전송
+              if (prevComposition.length > 0) {
+                sendInput('\x7f'.repeat(prevComposition.length));
+              }
+              if (newText) sendInput(newText);
+            }
+            prevComposition = newText;
+          });
+
+          hiddenInput.addEventListener('compositionend', () => {
+            prevComposition = '';
+            hiddenInput.value = '';
+          });
+
+          // Enter 키 처리
+          hiddenInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              sendInput('\r');
+            } else if (e.key === 'Backspace' && !e.isComposing) {
+              e.preventDefault();
+              sendInput('\x7f');
+            }
+          });
+
+          hiddenInput.focus();
+
+          // 키보드 닫힘 감지 → 정리
+          function cleanup() {
+            hiddenInput.remove();
+            proxy.style.pointerEvents = '';
+            onDirectInputChange?.(false);
+            prevComposition = '';
+          }
+
           const vv = window.visualViewport;
           if (vv) {
             let kbWasOpen = false;
@@ -375,21 +441,13 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
                 kbWasOpen = true;
               } else if (kbWasOpen && kbHeight < 50) {
                 vv.removeEventListener('resize', onVVResize);
-                proxy.style.pointerEvents = '';
-                onDirectInputChange?.(false);
+                cleanup();
               }
             };
             vv.addEventListener('resize', onVVResize);
-            // 즉시 한번 체크 (이미 키보드가 열려있을 수 있음)
             onVVResize();
           } else {
-            const xtextarea = term.textarea || container.querySelector('.xterm-helper-textarea');
-            const onBlur = () => {
-              xtextarea?.removeEventListener('blur', onBlur);
-              proxy.style.pointerEvents = '';
-              onDirectInputChange?.(false);
-            };
-            xtextarea?.addEventListener('blur', onBlur);
+            hiddenInput.addEventListener('blur', cleanup);
           }
         } else {
           lastTapTime = now;
