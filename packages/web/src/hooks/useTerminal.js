@@ -425,27 +425,31 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           });
           document.body.appendChild(hiddenInput);
 
-          // 하이브리드 입력: keydown(ASCII 직접 전송) + input(CJK diff 폴백)
+          // 하이브리드 입력: keydown(ASCII 직접 전송) + input(공통접두사 diff 폴백)
           let lastValue = '';
           let handledByKeydown = false;
-          const _log = (tag, detail) => console.log(`[INPUT] ${tag}`, detail);
+          let compositionJustEnded = false;
 
-          hiddenInput.addEventListener('compositionstart', (e) => {
-            _log('compositionstart', { data: e.data, value: hiddenInput.value, lastValue });
+          hiddenInput.addEventListener('compositionstart', () => {
+            // 새 조합 시작 → compositionend 후 예약된 클리어를 취소
+            compositionJustEnded = false;
           });
 
-          hiddenInput.addEventListener('compositionupdate', (e) => {
-            _log('compositionupdate', { data: e.data, value: hiddenInput.value, lastValue });
-          });
-
-          hiddenInput.addEventListener('compositionend', (e) => {
-            _log('compositionend', { data: e.data, value: hiddenInput.value, lastValue });
-            lastValue = '';
-            hiddenInput.value = '';
+          hiddenInput.addEventListener('compositionend', () => {
+            // 한글 받침→초성 전환 시 compositionend 직후 새 compositionstart가
+            // 이전 글자를 포함하므로, 즉시 클리어하면 중복 전송됨.
+            // rAF로 지연하여 새 조합이 시작되지 않을 때만 클리어.
+            compositionJustEnded = true;
+            requestAnimationFrame(() => {
+              if (compositionJustEnded) {
+                lastValue = '';
+                hiddenInput.value = '';
+                compositionJustEnded = false;
+              }
+            });
           });
 
           hiddenInput.addEventListener('keydown', (e) => {
-            _log('keydown', { key: e.key, isComposing: e.isComposing, value: hiddenInput.value, lastValue });
             handledByKeydown = false;
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -472,7 +476,6 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           });
 
           hiddenInput.addEventListener('input', (e) => {
-            _log('input', { inputType: e.inputType, value: hiddenInput.value, lastValue, handledByKeydown });
             // keydown에서 이미 처리된 경우 스킵
             if (handledByKeydown) {
               handledByKeydown = false;
@@ -480,25 +483,20 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
             }
             const val = hiddenInput.value;
             if (val === lastValue) return;
-            if (val.length > lastValue.length && val.startsWith(lastValue)) {
-              const sent = val.slice(lastValue.length);
-              _log('send(append)', { sent });
-              sendInput(sent);
-            } else if (val.length < lastValue.length) {
-              const deleted = lastValue.length - val.length;
-              _log('send(delete)', { deleted });
-              sendInput('\x7f'.repeat(deleted));
-            } else {
-              _log('send(replace)', { deleting: lastValue.length, sending: val });
-              sendInput('\x7f'.repeat(lastValue.length));
-              if (val) sendInput(val);
+            // 공통 접두사 기반 diff: 변경된 부분만 삭제+전송
+            let common = 0;
+            while (common < val.length && common < lastValue.length && val[common] === lastValue[common]) {
+              common++;
             }
+            const toDelete = lastValue.length - common;
+            if (toDelete > 0) sendInput('\x7f'.repeat(toDelete));
+            const toSend = val.slice(common);
+            if (toSend) sendInput(toSend);
             lastValue = val;
             // ASCII-only면 조합 중이라도 즉시 초기화 (Android 예측입력 대응)
             // CJK(한글 등)은 글자가 변형되므로 조합 완료까지 유지
             const isAscii = /^[\x20-\x7e]*$/.test(val);
             if (e.inputType !== 'insertCompositionText' || isAscii) {
-              _log('reset(non-composition)', { inputType: e.inputType, val });
               lastValue = '';
               hiddenInput.value = '';
             }
