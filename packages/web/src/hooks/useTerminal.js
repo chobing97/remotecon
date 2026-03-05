@@ -428,14 +428,14 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           // 하이브리드 입력: keydown(ASCII 직접 전송) + input(공통접두사 diff 폴백)
           let lastValue = '';
           let handledByKeydown = false;
-          // compositionend 시점의 값 기록 — 한글 받침→초성 전환 감지용
-          let lastCompositionEndValue = null;
+          // compositionend 후 브라우저가 커밋된 텍스트를 재삽입하는 것을 감지/무시하기 위한 버퍼.
+          // Android Chrome은 compositionend 후 input 이벤트를 여러 개 발생시킴:
+          //   1) val='' (조합 텍스트 제거)  2) val='학교' (커밋 텍스트 재삽입)
+          // 이 재삽입을 새 입력으로 처리하면 텍스트가 중복 전송됨.
+          let commitBuffer = null;
 
           hiddenInput.addEventListener('compositionend', () => {
-            // 값을 클리어하지 않음 — 한글 IME는 compositionend 직후
-            // 이전 글자를 포함한 새 조합을 시작함 (예: '학' → '학ㄱ').
-            // 브라우저가 input value를 관리하게 두고, diff로만 처리.
-            lastCompositionEndValue = lastValue;
+            commitBuffer = lastValue;
           });
 
           hiddenInput.addEventListener('keydown', (e) => {
@@ -461,7 +461,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
               handledByKeydown = true;
               lastValue = '';
               hiddenInput.value = '';
-              lastCompositionEndValue = null;
+              commitBuffer = null;
             }
           });
 
@@ -473,15 +473,33 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
             }
             const val = hiddenInput.value;
 
-            // compositionend 직후 첫 input 처리:
-            // 브라우저가 커밋된 텍스트를 input에서 제거했을 수 있음.
-            // val이 이전 조합값으로 시작하지 않으면 lastValue를 리셋하여
-            // 이미 터미널에 있는 텍스트를 삭제하지 않도록 함.
-            if (lastCompositionEndValue !== null) {
-              if (!val.startsWith(lastCompositionEndValue)) {
-                lastValue = '';
+            // compositionend 후 처리: 브라우저의 커밋 텍스트 재삽입을 무시
+            if (commitBuffer !== null) {
+              if (e.inputType === 'insertCompositionText') {
+                // 한글 받침→초성 전환: 새 조합이 커밋된 텍스트를 포함
+                if (val.startsWith(commitBuffer)) {
+                  lastValue = commitBuffer;
+                } else {
+                  lastValue = '';
+                }
+                commitBuffer = null;
+                // diff로 이동하여 새 부분만 전송
+              } else {
+                // 비조합 이벤트: 브라우저가 값을 비우거나 재삽입하는 중
+                if (val === '' || val === commitBuffer) {
+                  // 커밋 텍스트 재삽입 또는 클리어 — 이미 터미널에 있으므로 무시
+                  lastValue = val;
+                  return;
+                }
+                if (val.startsWith(commitBuffer)) {
+                  // 커밋 텍스트 + 새 입력 (예: '학교에서는 ' — 스페이스 추가)
+                  lastValue = commitBuffer;
+                } else {
+                  // 브라우저가 커밋 텍스트를 제거하고 새 입력만 있음 (예: ' ')
+                  lastValue = '';
+                }
+                commitBuffer = null;
               }
-              lastCompositionEndValue = null;
             }
 
             if (val === lastValue) return;
