@@ -108,14 +108,20 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
         fitAddon.fit();
       }
       // directInput 모드에서 리사이즈 후 커서가 보이도록 스크롤
+      // double rAF로 xterm 내부 렌더링 완료 후 실행
       if (directInputRef.current && termRef.current) {
-        const term = termRef.current;
-        const buf = term.buffer.active;
-        const cursorLine = buf.baseY + buf.cursorY;
-        term.scrollToLine(Math.max(0, cursorLine - term.rows + 1));
-        const vp = element.querySelector('.xterm-viewport');
-        const px = element.querySelector('.touch-scroll-proxy');
-        if (vp && px) px.scrollTop = vp.scrollTop;
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const term = termRef.current;
+            if (!term) return;
+            const buf = term.buffer.active;
+            const cursorLine = buf.baseY + buf.cursorY;
+            term.scrollToLine(Math.max(0, cursorLine - term.rows + 1));
+            const vp = element.querySelector('.xterm-viewport');
+            const px = element.querySelector('.touch-scroll-proxy');
+            if (vp && px) px.scrollTop = vp.scrollTop;
+          });
+        });
       }
     };
 
