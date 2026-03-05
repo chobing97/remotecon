@@ -76,22 +76,8 @@ export default function TerminalView({ sessionId, tabId, active }) {
     setAutoScroll(v);
   }, []);
 
-  const inputBarWasHiddenRef = useRef(false);
   const onDirectInputChange = useCallback((v) => {
     setDirectInput(v);
-    if (v) {
-      // 직접 입력 진입: 바가 숨겨져 있었다면 기억하고 표시
-      setInputBarHidden((prev) => {
-        inputBarWasHiddenRef.current = prev;
-        return false;
-      });
-    } else {
-      // 직접 입력 해제: 원래 숨겨져 있었으면 다시 숨김
-      if (inputBarWasHiddenRef.current) {
-        setInputBarHidden(true);
-        inputBarWasHiddenRef.current = false;
-      }
-    }
   }, []);
 
   const { attach, fit, dispose, sendInput, termRef, scrollToBottom } = useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, onDirectInputChange, mobileReadOnly: isMobile });
@@ -204,7 +190,7 @@ export default function TerminalView({ sessionId, tabId, active }) {
           &#x2328;
         </button>
       )}
-      {isMobile && !inputBarHidden && <MobileInputBar tabId={tabId} onSend={sendInput} selectMode={selectMode} onToggleSelect={toggleSelectMode} onHide={() => setInputBarHidden(true)} directInput={directInput} kbTop={kbTop} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
+      {isMobile && (!inputBarHidden || directInput) && <MobileInputBar tabId={tabId} onSend={sendInput} selectMode={selectMode} onToggleSelect={toggleSelectMode} onHide={() => setInputBarHidden(true)} directInput={directInput} kbTop={kbTop} disabled={tabStatus === 'disconnected' || tabStatus === 'terminated'} />}
     </div>
   );
 }
