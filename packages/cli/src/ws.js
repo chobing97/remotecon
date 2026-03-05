@@ -33,8 +33,9 @@ function log(msg) {
 /**
  * Hub 서버의 /ws/terminal 에 연결하고 PTY I/O를 중계합니다.
  */
-function connectToHub({ hubUrl, sessionId, sessionName, getToken, pty, onConnected, onDisconnect }) {
-  const wsUrl = hubUrl.replace(/^http/, 'ws') + `/ws/terminal?sessionId=${sessionId}`;
+function connectToHub({ hubUrl, sessionId, sessionName, getToken, reRegister, pty, onConnected, onDisconnect }) {
+  let currentSessionId = sessionId;
+  let wsUrl = hubUrl.replace(/^http/, 'ws') + `/ws/terminal?sessionId=${sessionId}`;
   const tag = sessionName || sessionId.slice(0, 8);
   let ws;
   let closed = false;
@@ -117,8 +118,20 @@ function connectToHub({ hubUrl, sessionId, sessionName, getToken, pty, onConnect
       slog(`error: ${err.message}`);
     });
 
-    ws.on('unexpected-response', (req, res) => {
+    ws.on('unexpected-response', async (req, res) => {
       slog(`unexpected-response: HTTP ${res.statusCode}`);
+      if (res.statusCode === 403 && reRegister) {
+        slog('session lost (403) → re-registering');
+        try {
+          const result = await reRegister();
+          currentSessionId = result.sessionId;
+          wsUrl = hubUrl.replace(/^http/, 'ws') + `/ws/terminal?sessionId=${currentSessionId}`;
+          slog(`re-registered: new sessionId=${currentSessionId}`);
+          delay = RECONNECT_DELAY;
+        } catch (err) {
+          slog(`re-register failed: ${err.message}`);
+        }
+      }
       scheduleReconnect();
     });
   }

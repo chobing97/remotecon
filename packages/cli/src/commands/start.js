@@ -60,11 +60,21 @@ async function start(sessionName, options = {}) {
 
   upsertSession({ pid: process.pid, session: name, sessionId, server: config.HUB_URL, status: 'connecting' });
 
+  let currentSessionId = sessionId;
+
   const hub = connectToHub({
     hubUrl: config.HUB_URL,
     sessionId,
     sessionName: name,
     getToken: () => getIdToken(config.DEVICE_CLIENT_ID, config.DEVICE_CLIENT_SECRET),
+    reRegister: async () => {
+      const token = await getIdToken(config.DEVICE_CLIENT_ID, config.DEVICE_CLIENT_SECRET);
+      const result = await registerSession(config.HUB_URL, name, token, record);
+      currentSessionId = result.sessionId;
+      upsertSession({ pid: process.pid, session: name, sessionId: currentSessionId, server: config.HUB_URL, status: 'connecting' });
+      process.stderr.write(`\x1b[2m[remotecon] 세션 재등록: ${name}\x1b[0m\n`);
+      return result;
+    },
     pty: ptyProcess,
     onConnected: () => {
       updateStatus(process.pid, 'connected');
