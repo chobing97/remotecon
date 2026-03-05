@@ -440,8 +440,10 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
               if (val) sendInput(val);
             }
             lastValue = val;
-            // CJK 조합 중이 아니면 즉시 초기화 (Android keydown 폴백 대응)
-            if (e.inputType !== 'insertCompositionText') {
+            // ASCII-only면 조합 중이라도 즉시 초기화 (Android 예측입력 대응)
+            // CJK(한글 등)은 글자가 변형되므로 조합 완료까지 유지
+            const isAscii = /^[\x20-\x7e]*$/.test(val);
+            if (e.inputType !== 'insertCompositionText' || isAscii) {
               lastValue = '';
               hiddenInput.value = '';
             }
