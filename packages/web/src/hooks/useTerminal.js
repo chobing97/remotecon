@@ -80,7 +80,7 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
       } else {
         fitAddon.fit();
       }
-    }, (v) => onAutoScrollChangeRef.current?.(v));
+    }, (v) => onAutoScrollChangeRef.current?.(v), (v) => onDirectInputChangeRef.current?.(v));
 
     termRef.current = term;
     fitAddonRef.current = fitAddon;
@@ -232,32 +232,14 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
   return { attach, fit, dispose, sendInput, termRef, wsRef, scrollToBottom };
 }
 
-function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
+function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDirectInputChange) {
   if (!('ontouchstart' in window)) return null;
 
   const viewport = container.querySelector('.xterm-viewport');
   const scrollArea = container.querySelector('.xterm-scroll-area');
   if (!viewport || !scrollArea) return;
 
-  // ── DEBUG OVERLAY ──
-  const dbgEl = document.createElement('pre');
-  Object.assign(dbgEl.style, {
-    position: 'fixed', top: '0', left: '0', right: '0',
-    zIndex: '9999', background: 'rgba(0,0,0,0.85)', color: '#0f0',
-    fontSize: '10px', padding: '4px 6px', margin: '0',
-    maxHeight: '30vh', overflowY: 'auto', pointerEvents: 'none',
-    whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-  });
-  document.body.appendChild(dbgEl);
-  const dbgLines = [];
-  function dbg(msg) {
-    const t = new Date().toLocaleTimeString('en', { hour12: false, fractionalSecondDigits: 1 });
-    dbgLines.push(`[${t}] ${msg}`);
-    if (dbgLines.length > 30) dbgLines.shift();
-    dbgEl.textContent = dbgLines.join('\n');
-    dbgEl.scrollTop = dbgEl.scrollHeight;
-  }
-  dbg('touch scroll setup');
+  function dbg(msg) { console.log(`[touch] ${msg}`); }
 
   // 투명 스크롤 프록시 — 브라우저 네이티브 관성 스크롤 사용
   const proxy = document.createElement('div');
@@ -375,7 +357,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
           proxy.style.pointerEvents = 'none';
           term.focus();
           lastTapTime = 0;
-          onDirectInputChangeRef.current?.(true);
+          onDirectInputChange?.(true);
           // visualViewport로 키보드 닫힘 감지 → 프록시 복원
           const vv = window.visualViewport;
           if (vv) {
@@ -390,7 +372,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
                 dbg('KB CLOSE detected → restore proxy');
                 vv.removeEventListener('resize', onVVResize);
                 proxy.style.pointerEvents = '';
-                onDirectInputChangeRef.current?.(false);
+                onDirectInputChange?.(false);
               }
             };
             vv.addEventListener('resize', onVVResize);
@@ -402,7 +384,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
             const onBlur = () => {
               xtextarea?.removeEventListener('blur', onBlur);
               proxy.style.pointerEvents = '';
-              onDirectInputChangeRef.current?.(false);
+              onDirectInputChange?.(false);
             };
             xtextarea?.addEventListener('blur', onBlur);
           }
