@@ -428,25 +428,14 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           // 하이브리드 입력: keydown(ASCII 직접 전송) + input(공통접두사 diff 폴백)
           let lastValue = '';
           let handledByKeydown = false;
-          let compositionJustEnded = false;
-
-          hiddenInput.addEventListener('compositionstart', () => {
-            // 새 조합 시작 → compositionend 후 예약된 클리어를 취소
-            compositionJustEnded = false;
-          });
+          // compositionend 시점의 값 기록 — 한글 받침→초성 전환 감지용
+          let lastCompositionEndValue = null;
 
           hiddenInput.addEventListener('compositionend', () => {
-            // 한글 받침→초성 전환 시 compositionend 직후 새 compositionstart가
-            // 이전 글자를 포함하므로, 즉시 클리어하면 중복 전송됨.
-            // rAF로 지연하여 새 조합이 시작되지 않을 때만 클리어.
-            compositionJustEnded = true;
-            requestAnimationFrame(() => {
-              if (compositionJustEnded) {
-                lastValue = '';
-                hiddenInput.value = '';
-                compositionJustEnded = false;
-              }
-            });
+            // 값을 클리어하지 않음 — 한글 IME는 compositionend 직후
+            // 이전 글자를 포함한 새 조합을 시작함 (예: '학' → '학ㄱ').
+            // 브라우저가 input value를 관리하게 두고, diff로만 처리.
+            lastCompositionEndValue = lastValue;
           });
 
           hiddenInput.addEventListener('keydown', (e) => {
@@ -472,6 +461,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
               handledByKeydown = true;
               lastValue = '';
               hiddenInput.value = '';
+              lastCompositionEndValue = null;
             }
           });
 
@@ -482,6 +472,18 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
               return;
             }
             const val = hiddenInput.value;
+
+            // compositionend 직후 첫 input 처리:
+            // 브라우저가 커밋된 텍스트를 input에서 제거했을 수 있음.
+            // val이 이전 조합값으로 시작하지 않으면 lastValue를 리셋하여
+            // 이미 터미널에 있는 텍스트를 삭제하지 않도록 함.
+            if (lastCompositionEndValue !== null) {
+              if (!val.startsWith(lastCompositionEndValue)) {
+                lastValue = '';
+              }
+              lastCompositionEndValue = null;
+            }
+
             if (val === lastValue) return;
             // 공통 접두사 기반 diff: 변경된 부분만 삭제+전송
             let common = 0;
@@ -493,8 +495,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
             const toSend = val.slice(common);
             if (toSend) sendInput(toSend);
             lastValue = val;
-            // ASCII-only면 조합 중이라도 즉시 초기화 (Android 예측입력 대응)
-            // CJK(한글 등)은 글자가 변형되므로 조합 완료까지 유지
+            // 비조합 입력(스페이스, 영문 등)이면 초기화 — 누적 방지
             const isAscii = /^[\x20-\x7e]*$/.test(val);
             if (e.inputType !== 'insertCompositionText' || isAscii) {
               lastValue = '';
