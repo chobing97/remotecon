@@ -399,7 +399,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           hiddenInput.enterKeyHint = 'send';
           Object.assign(hiddenInput.style, {
             position: 'fixed',
-            bottom: '0',
+            top: '0',
             left: '0',
             opacity: '0',
             width: '1px',

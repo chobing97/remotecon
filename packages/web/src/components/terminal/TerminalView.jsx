@@ -375,15 +375,14 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dir
   );
 
   if (directInput) {
-    // 키보드가 충분히 올라올 때까지 숨김 (애니메이션 중 상단 번쩍임 방지)
+    // 키보드가 충분히 올라올 때까지 숨김
     const kbHeight = window.innerHeight - (window.visualViewport?.height || window.innerHeight);
     if (kbHeight < 100) return null;
-    // 바 높이(약 40px)를 빼서 키보드 바로 위에 배치
-    const barTop = kbTop - 40;
+    // bottom 기반 배치: vvTop 변화에 영향받지 않음
     return (
       <div style={{
         position: 'fixed',
-        top: barTop,
+        bottom: kbHeight,
         left: 0,
         right: 0,
         zIndex: 100,
