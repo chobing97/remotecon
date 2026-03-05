@@ -428,13 +428,24 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           // 하이브리드 입력: keydown(ASCII 직접 전송) + input(CJK diff 폴백)
           let lastValue = '';
           let handledByKeydown = false;
+          const _log = (tag, detail) => console.log(`[INPUT] ${tag}`, detail);
 
-          hiddenInput.addEventListener('compositionend', () => {
+          hiddenInput.addEventListener('compositionstart', (e) => {
+            _log('compositionstart', { data: e.data, value: hiddenInput.value, lastValue });
+          });
+
+          hiddenInput.addEventListener('compositionupdate', (e) => {
+            _log('compositionupdate', { data: e.data, value: hiddenInput.value, lastValue });
+          });
+
+          hiddenInput.addEventListener('compositionend', (e) => {
+            _log('compositionend', { data: e.data, value: hiddenInput.value, lastValue });
             lastValue = '';
             hiddenInput.value = '';
           });
 
           hiddenInput.addEventListener('keydown', (e) => {
+            _log('keydown', { key: e.key, isComposing: e.isComposing, value: hiddenInput.value, lastValue });
             handledByKeydown = false;
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -461,6 +472,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           });
 
           hiddenInput.addEventListener('input', (e) => {
+            _log('input', { inputType: e.inputType, value: hiddenInput.value, lastValue, handledByKeydown });
             // keydown에서 이미 처리된 경우 스킵
             if (handledByKeydown) {
               handledByKeydown = false;
@@ -469,11 +481,15 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
             const val = hiddenInput.value;
             if (val === lastValue) return;
             if (val.length > lastValue.length && val.startsWith(lastValue)) {
-              sendInput(val.slice(lastValue.length));
+              const sent = val.slice(lastValue.length);
+              _log('send(append)', { sent });
+              sendInput(sent);
             } else if (val.length < lastValue.length) {
               const deleted = lastValue.length - val.length;
+              _log('send(delete)', { deleted });
               sendInput('\x7f'.repeat(deleted));
             } else {
+              _log('send(replace)', { deleting: lastValue.length, sending: val });
               sendInput('\x7f'.repeat(lastValue.length));
               if (val) sendInput(val);
             }
@@ -482,6 +498,7 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
             // CJK(한글 등)은 글자가 변형되므로 조합 완료까지 유지
             const isAscii = /^[\x20-\x7e]*$/.test(val);
             if (e.inputType !== 'insertCompositionText' || isAscii) {
+              _log('reset(non-composition)', { inputType: e.inputType, val });
               lastValue = '';
               hiddenInput.value = '';
             }
