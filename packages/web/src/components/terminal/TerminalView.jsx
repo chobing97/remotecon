@@ -433,7 +433,7 @@ const barStyles = {
   key: {
     fontSize: 13,
     fontWeight: 500,
-    padding: '6px 12px',
+    padding: '4px 10px',
     borderRadius: 6,
     background: 'var(--bg-surface)',
     color: 'var(--fg)',
