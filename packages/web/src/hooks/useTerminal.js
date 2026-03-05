@@ -356,15 +356,32 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange) {
           term.focus();
           lastTapTime = 0;
           onDirectInputChangeRef.current?.(true);
-          // 포커스 상태를 주기적으로 확인하여 복원
-          const xtextarea = term.textarea || container.querySelector('.xterm-helper-textarea');
-          const checkFocus = setInterval(() => {
-            if (!xtextarea || document.activeElement !== xtextarea) {
-              clearInterval(checkFocus);
+          // visualViewport로 키보드 닫힘 감지 → 프록시 복원
+          const vv = window.visualViewport;
+          if (vv) {
+            let kbWasOpen = false;
+            const onVVResize = () => {
+              const kbHeight = window.innerHeight - vv.height;
+              if (!kbWasOpen && kbHeight > 100) {
+                kbWasOpen = true;
+              } else if (kbWasOpen && kbHeight < 50) {
+                // 키보드 닫힘
+                vv.removeEventListener('resize', onVVResize);
+                proxy.style.pointerEvents = '';
+                onDirectInputChangeRef.current?.(false);
+              }
+            };
+            vv.addEventListener('resize', onVVResize);
+          } else {
+            // fallback: visualViewport 미지원 시 blur 이벤트
+            const xtextarea = term.textarea || container.querySelector('.xterm-helper-textarea');
+            const onBlur = () => {
+              xtextarea?.removeEventListener('blur', onBlur);
               proxy.style.pointerEvents = '';
               onDirectInputChangeRef.current?.(false);
-            }
-          }, 200);
+            };
+            xtextarea?.addEventListener('blur', onBlur);
+          }
         } else {
           lastTapTime = now;
         }

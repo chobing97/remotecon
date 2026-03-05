@@ -352,6 +352,8 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dir
   );
 
   if (directInput) {
+    // 키보드가 아직 올라오지 않았으면 렌더링하지 않음 (bottom:0 에 깔리는 문제 방지)
+    if (kbOffset === 0) return null;
     return (
       <div style={{
         position: 'fixed',
