@@ -282,15 +282,11 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dir
 
   // directInput 모드에서 키보드 바로 위 위치 추적 (top 기준)
   useEffect(() => {
-    console.log('[MIB] directInput changed:', directInput);
     if (!directInput) { setKbTop(-1); return; }
     const vv = window.visualViewport;
-    if (!vv) { console.log('[MIB] no visualViewport'); return; }
+    if (!vv) return;
     const update = () => {
-      // visual viewport 하단 = 키보드 바로 위
-      const top = vv.offsetTop + vv.height;
-      console.log(`[MIB] vv update offTop=${Math.round(vv.offsetTop)} vvH=${Math.round(vv.height)} → top=${Math.round(top)}`);
-      setKbTop(top);
+      setKbTop(vv.offsetTop + vv.height);
     };
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);

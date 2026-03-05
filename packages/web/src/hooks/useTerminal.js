@@ -239,7 +239,6 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
   const scrollArea = container.querySelector('.xterm-scroll-area');
   if (!viewport || !scrollArea) return;
 
-  function dbg(msg) { console.log(`[touch] ${msg}`); }
 
   // 투명 스크롤 프록시 — 브라우저 네이티브 관성 스크롤 사용
   const proxy = document.createElement('div');
@@ -364,12 +363,9 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
             let kbWasOpen = false;
             const onVVResize = () => {
               const kbHeight = window.innerHeight - vv.height;
-              dbg(`vvResize kbH=${Math.round(kbHeight)} wasOpen=${kbWasOpen} proxy=${proxy.style.pointerEvents}`);
               if (!kbWasOpen && kbHeight > 100) {
                 kbWasOpen = true;
-                dbg('KB OPEN detected');
               } else if (kbWasOpen && kbHeight < 50) {
-                dbg('KB CLOSE detected → restore proxy');
                 vv.removeEventListener('resize', onVVResize);
                 proxy.style.pointerEvents = '';
                 onDirectInputChange?.(false);
@@ -379,7 +375,6 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
             // 즉시 한번 체크 (이미 키보드가 열려있을 수 있음)
             onVVResize();
           } else {
-            dbg('no visualViewport');
             const xtextarea = term.textarea || container.querySelector('.xterm-helper-textarea');
             const onBlur = () => {
               xtextarea?.removeEventListener('blur', onBlur);
@@ -388,7 +383,6 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
             };
             xtextarea?.addEventListener('blur', onBlur);
           }
-          dbg(`doubletap! proxy.pe=${proxy.style.pointerEvents}`);
         } else {
           lastTapTime = now;
         }
