@@ -73,6 +73,14 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
     term.loadAddon(unicode11);
     term.unicode.activeVersion = '11';
     term.open(element);
+    // 모바일 예측 입력 비활성화 → 키 입력 즉시 반영
+    const xtextarea = element.querySelector('.xterm-helper-textarea');
+    if (xtextarea) {
+      xtextarea.setAttribute('autocorrect', 'off');
+      xtextarea.setAttribute('autocomplete', 'off');
+      xtextarea.setAttribute('autocapitalize', 'off');
+      xtextarea.setAttribute('spellcheck', 'false');
+    }
     fitAddon.fit();
     scrollToBottomRef.current = setupMobileTouchScroll(element, term, () => {
       if (cliSizeRef.current) {
