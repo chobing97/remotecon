@@ -370,6 +370,10 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
           proxy.scrollTop = proxy.scrollHeight;
 
           // xterm textarea 대신 직접 만든 input으로 키보드 열기
+          // xterm의 내부 textarea가 포커스를 가로채지 않도록 blur
+          const xtermTextarea = container.querySelector('.xterm-helper-textarea');
+          if (xtermTextarea) xtermTextarea.blur();
+
           const hiddenInput = document.createElement('input');
           hiddenInput.type = 'text';
           hiddenInput.setAttribute('autocomplete', 'off');
@@ -449,7 +453,8 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
             }
           });
 
-          hiddenInput.focus();
+          // xterm 이벤트 핸들러 완료 후 포커스 (포커스 가로채기 방지)
+          setTimeout(() => hiddenInput.focus(), 50);
 
           function cleanup() {
             hiddenInput.remove();
