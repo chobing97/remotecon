@@ -30,8 +30,11 @@ export default function TerminalView({ sessionId, tabId, active }) {
         const kbHeight = window.innerHeight - vv.height;
         if (kbHeight > 100) {
           maxHeightFrozen = true;
+          // getBoundingClientRect().top is relative to the layout viewport (stable).
+          // Do NOT include vv.offsetTop — it bounces 0→300→0 on Android,
+          // causing maxHeight to be hundreds of pixels too large.
           const outerTop = outerRef.current.getBoundingClientRect().top;
-          setOuterMaxHeight(vv.offsetTop + vv.height - outerTop - 44);
+          setOuterMaxHeight(vv.height - outerTop - 44);
         }
       }
     };
