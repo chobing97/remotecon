@@ -277,19 +277,20 @@ function SelectOverlay({ termRef, onClose }) {
 
 function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, directInput, disabled }) {
   const [value, setValue] = useState(() => inputCache.get(tabId) || '');
-  const [kbOffset, setKbOffset] = useState(0);
+  const [kbTop, setKbTop] = useState(-1);
   const textareaRef = useRef(null);
 
-  // directInput 모드에서 키보드 높이 추적
+  // directInput 모드에서 키보드 바로 위 위치 추적 (top 기준)
   useEffect(() => {
     console.log('[MIB] directInput changed:', directInput);
-    if (!directInput) { setKbOffset(0); return; }
+    if (!directInput) { setKbTop(-1); return; }
     const vv = window.visualViewport;
     if (!vv) { console.log('[MIB] no visualViewport'); return; }
     const update = () => {
-      const offset = Math.max(0, window.innerHeight - vv.height);
-      console.log(`[MIB] vv.resize innerH=${window.innerHeight} vvH=${Math.round(vv.height)} → kbOffset=${Math.round(offset)}`);
-      setKbOffset(offset);
+      // visual viewport 하단 = 키보드 바로 위
+      const top = vv.offsetTop + vv.height;
+      console.log(`[MIB] vv update offTop=${Math.round(vv.offsetTop)} vvH=${Math.round(vv.height)} → top=${Math.round(top)}`);
+      setKbTop(top);
     };
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
@@ -355,12 +356,15 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dir
   );
 
   if (directInput) {
-    // 키보드가 아직 올라오지 않았으면 렌더링하지 않음 (bottom:0 에 깔리는 문제 방지)
-    if (kbOffset === 0) return null;
+    // 키보드가 아직 올라오지 않았거나 화면 전체일 때 숨김
+    const kbHeight = window.innerHeight - (window.visualViewport?.height || window.innerHeight);
+    if (kbHeight < 50) return null;
+    // 바 높이(약 40px)를 빼서 키보드 바로 위에 배치
+    const barTop = kbTop - 40;
     return (
       <div style={{
         position: 'fixed',
-        bottom: kbOffset,
+        top: barTop,
         left: 0,
         right: 0,
         zIndex: 100,
