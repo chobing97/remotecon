@@ -126,8 +126,10 @@ function connectToHub({ hubUrl, sessionId, sessionName, getToken, reRegister, pt
           const result = await reRegister();
           currentSessionId = result.sessionId;
           wsUrl = hubUrl.replace(/^http/, 'ws') + `/ws/terminal?sessionId=${currentSessionId}`;
-          slog(`re-registered: new sessionId=${currentSessionId}`);
+          slog(`re-registered: new sessionId=${currentSessionId} → reconnecting immediately`);
           delay = RECONNECT_DELAY;
+          connect();
+          return;
         } catch (err) {
           slog(`re-register failed: ${err.message}`);
         }
