@@ -71,7 +71,14 @@ function getSession(id) {
 function deleteSession(id) {
   log.info(`delete id=${id}`);
   const session = live.get(id);
-  if (session?.headlessTerm) session.headlessTerm.dispose();
+  if (session) {
+    // 터미널 WebSocket을 닫아야 CLI가 재연결/재등록을 시도함
+    if (session.terminalWs) {
+      session.terminalWs.close(4001, 'Session deleted');
+      session.terminalWs = null;
+    }
+    if (session.headlessTerm) session.headlessTerm.dispose();
+  }
   live.delete(id);
   getDb().prepare(
     "UPDATE sessions SET closed_at = datetime('now') WHERE id = ? AND closed_at IS NULL"
