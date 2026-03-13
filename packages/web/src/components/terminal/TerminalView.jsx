@@ -82,7 +82,11 @@ export default function TerminalView({ sessionId, tabId, active }) {
     setDirectInput(v);
   }, []);
 
-  const { attach, fit, dispose, sendInput, termRef, scrollToBottom } = useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, onDirectInputChange, mobileReadOnly: isMobile });
+  const onLongPress = useCallback(() => {
+    if (!selectMode) toggleSelectMode();
+  }, [selectMode, toggleSelectMode]);
+
+  const { attach, fit, dispose, sendInput, termRef, scrollToBottom } = useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, onDirectInputChange, onLongPress, mobileReadOnly: isMobile });
   const attachedRef = useRef(false);
 
   useEffect(() => {

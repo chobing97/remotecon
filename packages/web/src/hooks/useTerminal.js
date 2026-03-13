@@ -6,7 +6,7 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { xtermTheme } from '../styles/theme';
 import { api } from '../api/client';
 
-export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, onDirectInputChange, mobileReadOnly } = {}) {
+export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScrollChange, onDirectInputChange, onLongPress, mobileReadOnly } = {}) {
   const termRef = useRef(null);
   const wsRef = useRef(null);
   const fitAddonRef = useRef(null);
@@ -26,6 +26,8 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
   onStatusChangeRef.current = onStatusChange;
   const onDirectInputChangeRef = useRef(onDirectInputChange);
   onDirectInputChangeRef.current = onDirectInputChange;
+  const onLongPressRef = useRef(onLongPress);
+  onLongPressRef.current = onLongPress;
   const directInputRef = useRef(false);
 
   // CLI cols 기준으로 컨테이너 폭 설정 + 화면 높이에 맞춰 rows 계산
@@ -86,7 +88,7 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
       } else {
         fitAddon.fit();
       }
-    }, (v) => onAutoScrollChangeRef.current?.(v), (v) => { directInputRef.current = v; onDirectInputChangeRef.current?.(v); }, sendInputDirect);
+    }, (v) => onAutoScrollChangeRef.current?.(v), (v) => { directInputRef.current = v; onDirectInputChangeRef.current?.(v); }, sendInputDirect, () => onLongPressRef.current?.());
 
     termRef.current = term;
     fitAddonRef.current = fitAddon;
@@ -272,7 +274,7 @@ export function useTerminal(sessionId, { onTerminated, onStatusChange, onAutoScr
   return { attach, fit, dispose, sendInput, termRef, wsRef, scrollToBottom, scrollToCursor };
 }
 
-function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDirectInputChange, sendInput) {
+function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDirectInputChange, sendInput, onLongPress) {
   if (!('ontouchstart' in window)) return null;
 
   const viewport = container.querySelector('.xterm-viewport');
@@ -359,12 +361,22 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
   let tapStartX = 0;
   let tapStartY = 0;
 
+  // 롱프레스 → select 모드
+  let longPressTimer = null;
+  let longPressFired = false;
+
   proxy.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1) {
       tapStartX = e.touches[0].clientX;
       tapStartY = e.touches[0].clientY;
+      longPressFired = false;
+      longPressTimer = setTimeout(() => {
+        longPressFired = true;
+        onLongPress?.();
+      }, 500);
     }
     if (e.touches.length === 2) {
+      clearTimeout(longPressTimer);
       pinching = true;
       pinchStartDist = getTouchDist(e.touches[0], e.touches[1]);
       pinchBaseFontSize = term.options.fontSize || 14;
@@ -372,6 +384,15 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
   }, { passive: true });
 
   proxy.addEventListener('touchmove', (e) => {
+    // 스크롤 시 롱프레스 취소
+    if (longPressTimer && e.touches.length === 1) {
+      const dx = Math.abs(e.touches[0].clientX - tapStartX);
+      const dy = Math.abs(e.touches[0].clientY - tapStartY);
+      if (dx > 10 || dy > 10) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    }
     if (e.touches.length === 2 && pinching) {
       e.preventDefault();
       const dist = getTouchDist(e.touches[0], e.touches[1]);
@@ -387,6 +408,14 @@ function setupMobileTouchScroll(container, term, onFit, onAutoScrollChange, onDi
   }, { passive: false });
 
   proxy.addEventListener('touchend', (e) => {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+    // 롱프레스가 발동했으면 더블탭 처리 스킵
+    if (longPressFired) {
+      longPressFired = false;
+      pinching = false;
+      return;
+    }
     // 더블탭 감지 (스크롤이 아닌 짧은 탭만)
     if (e.changedTouches.length === 1 && e.touches.length === 0 && !pinching) {
       const t = e.changedTouches[0];
