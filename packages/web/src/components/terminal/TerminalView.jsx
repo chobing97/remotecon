@@ -350,12 +350,16 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dir
 
   const disabledOpacity = disabled ? 0.4 : 1;
 
+  // directInput 모드에서 버튼 터치 시 hidden input 포커스를 유지하여 키보드가 닫히지 않도록
+  const keepFocus = directInput ? (e) => e.preventDefault() : undefined;
+
   const keysRow = (
     <div style={barStyles.keys}>
       {specialKeys.map((k) => (
         <button
           key={k.label}
           className="special-key"
+          onMouseDown={keepFocus}
           onClick={() => !disabled && onSend(k.data)}
           style={{ ...barStyles.key, opacity: disabledOpacity }}
           disabled={disabled}
@@ -365,6 +369,7 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dir
       ))}
       <button
         className="special-key"
+        onMouseDown={keepFocus}
         onClick={onToggleSelect}
         style={{ ...barStyles.key, ...(selectMode ? { background: 'var(--blue)', color: '#fff' } : {}) }}
       >
@@ -372,6 +377,7 @@ function MobileInputBar({ tabId, onSend, selectMode, onToggleSelect, onHide, dir
       </button>
       <button
         className="special-key"
+        onMouseDown={keepFocus}
         onClick={onHide}
         style={barStyles.key}
       >
