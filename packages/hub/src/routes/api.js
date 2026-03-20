@@ -70,6 +70,18 @@ router.delete('/api/sessions/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// CLI에서 Bearer 토큰으로 구버전 세션 정리
+router.delete('/api/cli/sessions/:id', requireApiAuth, (req, res) => {
+  const session = getSession(req.params.id);
+  if (!session) return res.json({ ok: true }); // 이미 없으면 성공 처리
+  if (session.userId !== req.apiUser.id) return res.status(403).json({ error: 'Forbidden' });
+
+  if (session.terminalWs) session.terminalWs.close(4001, 'Session replaced');
+  session.browserWss.forEach(ws => ws.close(4001, 'Session replaced'));
+  deleteSession(req.params.id);
+  res.json({ ok: true });
+});
+
 // ── WS 토큰 ────────────────────────────────
 router.post('/api/ws-token', requireAuth, (req, res) => {
   const token = issueBrowserToken(req.user.id);

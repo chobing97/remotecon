@@ -94,10 +94,9 @@ function getSessionsByUser(userId) {
   return rows.map(row => {
     let mem = live.get(row.id);
 
-    // DB에만 있고 live에 없으면 복원 + 정리 타이머 설정
+    // DB에만 있고 live에 없으면 복원 (타이머는 설정하지 않음 — CLI 재연결 대기)
     if (!mem) {
       mem = reviveRuntime(row.id, row.name, row.user_id, !!row.recording);
-      scheduleCleanup(mem);
     }
 
     return {

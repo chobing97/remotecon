@@ -121,9 +121,10 @@ function connectToHub({ hubUrl, sessionId, sessionName, getToken, reRegister, pt
     ws.on('unexpected-response', async (req, res) => {
       slog(`unexpected-response: HTTP ${res.statusCode}`);
       if (res.statusCode === 403 && reRegister) {
-        slog('session lost (403) → re-registering');
+        const oldSessionId = currentSessionId;
+        slog(`session lost (403) → re-registering (old=${oldSessionId})`);
         try {
-          const result = await reRegister();
+          const result = await reRegister(oldSessionId);
           currentSessionId = result.sessionId;
           wsUrl = hubUrl.replace(/^http/, 'ws') + `/ws/terminal?sessionId=${currentSessionId}`;
           slog(`re-registered: new sessionId=${currentSessionId} → reconnecting immediately`);

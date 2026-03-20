@@ -10,6 +10,25 @@ const { spawnPty } = require('../pty');
 const config = require('../config');
 const { upsertSession, updateStatus, removeSession, generateUniqueName } = require('../status-db');
 
+function deleteRemoteSession(hubUrl, sessionId, idToken) {
+  return new Promise((resolve) => {
+    const url = new URL(`/api/cli/sessions/${sessionId}`, hubUrl);
+    const isHttps = url.protocol === 'https:';
+    const lib = isHttps ? https : http;
+
+    const req = lib.request({
+      hostname: url.hostname,
+      port: url.port || (isHttps ? 443 : 80),
+      path: url.pathname,
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${idToken}` },
+    }, () => resolve());
+
+    req.on('error', () => resolve()); // 실패해도 무시
+    req.end();
+  });
+}
+
 function registerSession(hubUrl, name, idToken, record) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({ name, record });
@@ -67,8 +86,12 @@ async function start(sessionName, options = {}) {
     sessionId,
     sessionName: name,
     getToken: () => getIdToken(config.DEVICE_CLIENT_ID, config.DEVICE_CLIENT_SECRET),
-    reRegister: async () => {
+    reRegister: async (oldSessionId) => {
       const token = await getIdToken(config.DEVICE_CLIENT_ID, config.DEVICE_CLIENT_SECRET);
+      // 구버전 세션 정리 (실패해도 계속 진행)
+      if (oldSessionId) {
+        try { await deleteRemoteSession(config.HUB_URL, oldSessionId, token); } catch {}
+      }
       const result = await registerSession(config.HUB_URL, name, token, record);
       currentSessionId = result.sessionId;
       upsertSession({ pid: process.pid, session: name, sessionId: currentSessionId, server: config.HUB_URL, status: 'connecting' });
