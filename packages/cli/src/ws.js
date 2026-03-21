@@ -47,6 +47,13 @@ function connectToHub({ hubUrl, sessionId, sessionName, getToken, reRegister, pt
   async function connect() {
     if (closed) { slog('connect skipped (closed)'); return; }
 
+    // 이전 WebSocket 정리 (연결 누적 방지)
+    if (ws) {
+      ws.removeAllListeners();
+      try { ws.close(); } catch {}
+      ws = null;
+    }
+
     slog(`connect attempt (delay=${delay}ms)`);
 
     let token;

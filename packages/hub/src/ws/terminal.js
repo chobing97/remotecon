@@ -59,6 +59,11 @@ function handleTerminalConnection(ws, session) {
   });
 
   ws.on('close', (code) => {
+    // 이미 다른 연결로 교체된 경우 무시 (중복 연결 방어)
+    if (session.terminalWs !== ws) {
+      log.info(`CLI stale ws closed sessionId=${session.id} code=${code} (ignored)`);
+      return;
+    }
     session.terminalWs = null;
     log.info(`CLI disconnected sessionId=${session.id} code=${code}`);
 
